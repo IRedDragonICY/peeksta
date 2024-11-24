@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, useCallback} from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import './App.css';
 
@@ -51,34 +51,35 @@ function App() {
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
-        handleFile(file);
+        handleFile(file).catch((error) => {
+            console.error('Error handling file upload:', error);
+        });
     };
 
-    const handleDragEnter = (event) => {
+    const handleDragEnter = useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
         if (event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
             setIsDragActive(true);
         }
-    };
+    }, []);
 
-    const handleDragOver = (event) => {
+    const handleDragOver = useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
         if (event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
             setIsDragActive(true);
         }
-    };
+    }, []);
 
-    const handleDragLeave = (event) => {
+    const handleDragLeave = useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
         if (event.target === rootRef.current) {
             setIsDragActive(false);
         }
-    };
+    }, []);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const handleDrop = useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -89,10 +90,12 @@ function App() {
             setNotFollowingBack([]);
             setSearchTerm('');
             setIsUploaded(false);
-            handleFile(file);
+            handleFile(file).catch((error) => {
+                console.error('Error handling dropped file:', error);
+            });
             event.dataTransfer.clearData();
         }
-    });
+    }, []);
 
     useEffect(() => {
         const rootElement = rootRef.current;
@@ -111,7 +114,7 @@ function App() {
                 rootElement.removeEventListener('drop', handleDrop);
             }
         };
-    }, [handleDrop]);
+    }, [handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
 
     return (
         <div id="root" ref={rootRef}>
