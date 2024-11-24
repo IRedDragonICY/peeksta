@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import JSZip from 'jszip';
 import './App.css';
 
@@ -11,35 +11,39 @@ function App() {
 
     const handleFile = async (file) => {
         if (file && file.name.endsWith('.zip')) {
-            const zip = new JSZip();
-            const contents = await zip.loadAsync(file);
-            let followersList = [];
-            let followingList = [];
+            try {
+                const zip = await JSZip.loadAsync(file);
+                let followersList = [];
+                let followingList = [];
 
-            const followersFile = contents.file(/followers_1\.json$/i)[0];
-            if (followersFile) {
-                const followersContent = await followersFile.async('string');
-                const followersData = JSON.parse(followersContent);
-                followersList = followersData.map((item) =>
-                    item.string_list_data[0].value.toLowerCase()
+                const followersFile = zip.file(/followers_1\.json$/i)[0];
+                if (followersFile) {
+                    const followersContent = await followersFile.async('string');
+                    const followersData = JSON.parse(followersContent);
+                    followersList = followersData.map((item) =>
+                        item.string_list_data[0].value.toLowerCase()
+                    );
+                }
+
+                const followingFile = zip.file(/following\.json$/i)[0];
+                if (followingFile) {
+                    const followingContent = await followingFile.async('string');
+                    const followingData = JSON.parse(followingContent);
+                    followingList = followingData.relationships_following.map((item) =>
+                        item.string_list_data[0].value.toLowerCase()
+                    );
+                }
+
+                const notFollowingBackList = followingList.filter(
+                    (username) => !followersList.includes(username)
                 );
+
+                setNotFollowingBack(notFollowingBackList);
+                setIsUploaded(true);
+                // eslint-disable-next-line no-unused-vars
+            } catch (error) {
+                alert('An error occurred while processing the file. Please ensure your ZIP file is valid.');
             }
-
-            const followingFile = contents.file(/following\.json$/i)[0];
-            if (followingFile) {
-                const followingContent = await followingFile.async('string');
-                const followingData = JSON.parse(followingContent);
-                followingList = followingData.relationships_following.map((item) =>
-                    item.string_list_data[0].value.toLowerCase()
-                );
-            }
-
-            const notFollowingBackList = followingList.filter(
-                (username) => !followersList.includes(username)
-            );
-
-            setNotFollowingBack(notFollowingBackList);
-            setIsUploaded(true);
         } else {
             alert('Please upload a valid ZIP file.');
         }
@@ -53,10 +57,7 @@ function App() {
     const handleDragEnter = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (
-            event.dataTransfer.types &&
-            event.dataTransfer.types.includes('Files')
-        ) {
+        if (event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
             setIsDragActive(true);
         }
     };
@@ -64,10 +65,7 @@ function App() {
     const handleDragOver = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (
-            event.dataTransfer.types &&
-            event.dataTransfer.types.includes('Files')
-        ) {
+        if (event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
             setIsDragActive(true);
         }
     };
@@ -80,7 +78,8 @@ function App() {
         }
     };
 
-    const handleDrop = (event) => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handleDrop = useCallback((event) => {
         event.preventDefault();
         event.stopPropagation();
         setIsDragActive(false);
@@ -93,7 +92,7 @@ function App() {
             handleFile(file);
             event.dataTransfer.clearData();
         }
-    };
+    });
 
     useEffect(() => {
         const rootElement = rootRef.current;
@@ -112,48 +111,68 @@ function App() {
                 rootElement.removeEventListener('drop', handleDrop);
             }
         };
-    }, []);
+    }, [handleDrop]);
 
     return (
         <div id="root" ref={rootRef}>
-            <h1>Peeksta</h1>
+            <header>
+                <h1>Peeksta</h1>
+                <p className="info-message">
+                    To download your followers and following data in JSON format, please visit{' '}
+                    <a
+                        href="https://accountscenter.instagram.com/info_and_permissions/dyi/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        this link
+                    </a>
+                    .
+                </p>
+            </header>
+
             {!isUploaded && (
                 <div className={`upload-area ${isDragActive ? 'active' : ''}`}>
                     <input type="file" accept=".zip" onChange={handleFileUpload} />
                     <p>Drag and drop your ZIP file here or click to upload.</p>
                 </div>
             )}
-            {isUploaded && notFollowingBack.length === 0 && (
-                <p className="no-users">All users are following you back!</p>
-            )}
-            {isUploaded && notFollowingBack.length > 0 && (
+
+            {isUploaded && (
                 <>
-                    <input
-                        type="text"
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
-                        className="search-bar"
-                    />
-                    <ul className="user-list">
-                        {notFollowingBack
-                            .filter((username) => username.includes(searchTerm))
-                            .map((username) => (
-                                <li key={username}>
-                                    <a
-                                        href={`https://www.instagram.com/${username}/`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {username}
-                                    </a>
-                                </li>
-                            ))}
-                    </ul>
+                    {notFollowingBack.length > 0 ? (
+                        <>
+                            <input
+                                type="text"
+                                placeholder="Search users..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
+                                className="search-bar"
+                            />
+                            <div className="user-list-container">
+                                <ul className="user-list">
+                                    {notFollowingBack
+                                        .filter((username) => username.includes(searchTerm))
+                                        .map((username) => (
+                                            <li key={username}>
+                                                <a
+                                                    href={`https://www.instagram.com/${username}/`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    {username}
+                                                </a>
+                                            </li>
+                                        ))}
+                                </ul>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="no-users">All users are following you back!</p>
+                    )}
                 </>
             )}
-            {/* Only show the drag overlay when isUploaded is true */}
-            {isDragActive && isUploaded && (
+
+            {isDragActive && (
                 <div
                     className="drag-overlay"
                     onDragEnter={handleDragEnter}
