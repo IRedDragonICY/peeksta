@@ -72,13 +72,11 @@ function App() {
         <>
             <GlobalStyles />
             <div ref={rootRef} style={{ position: 'relative' }}>
-                {/* Pastikan header memiliki z-index tinggi agar link dapat diklik */}
                 <div style={{ position: 'relative', zIndex: 10 }}>
                     <Header />
                 </div>
 
                 {!isUploaded && (
-                    // UploadArea berada di bawah Header
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <UploadArea isActive={isDragActive} onFileChange={handleFileChange} />
                     </div>
