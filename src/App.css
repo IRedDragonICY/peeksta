@@ -40,6 +40,8 @@ h1 {
   background-color: #f9f9f9;
   transition: border-color 0.3s, background-color 0.3s;
   animation: fadeIn 0.5s ease-in-out;
+
+  pointer-events: none;
 }
 
 .upload-area input[type='file'] {
@@ -50,6 +52,8 @@ h1 {
   height: 100%;
   opacity: 0;
   cursor: pointer;
+
+  pointer-events: auto;
 }
 
 .upload-area p {
