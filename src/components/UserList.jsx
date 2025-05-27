@@ -1,76 +1,72 @@
 import React from 'react';
-import styled from 'styled-components';
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 0.8rem;
-  margin-bottom: 1rem;
-  font-size: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  &:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    background-color: #1e1e1e;
-    border-color: #333;
-    color: #e0e0e0;
-  }
-`;
-
-const UserListContainer = styled.div`
-  max-height: 400px;
-  overflow-y: auto;
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin-top: 1rem;
-  }
-
-  li {
-    padding: 0.5rem 0;
-  }
-
-  a {
-    font-size: 1.1rem;
-  }
-`;
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
 
 export function UserList({ users, searchTerm, onSearchChange }) {
     const filteredUsers = users.filter((username) =>
-        username.includes(searchTerm)
+        username.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (users.length === 0) {
-        return <p className="no-users">All users are following you back!</p>;
+        return (
+            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', mt: 2 }}>
+                <Typography variant="subtitle1">
+                    All users are following you back!
+                </Typography>
+            </Paper>
+        );
     }
 
     return (
-        <>
-            <SearchInput
-                type="text"
-                placeholder="Search users..."
+        <Paper elevation={1} sx={{ p: 2, mt: 2 }}>
+            <TextField
+                fullWidth
+                variant="outlined"
+                label="Search users..."
                 value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value.toLowerCase())}
+                onChange={(e) => onSearchChange(e.target.value)}
+                sx={{ mb: 2 }}
             />
-            <UserListContainer>
-                <ul>
+            {filteredUsers.length === 0 && searchTerm && (
+                <Typography variant="subtitle1" sx={{ textAlign: 'center', my: 2 }}>
+                    No users found matching your search.
+                </Typography>
+            )}
+            {filteredUsers.length > 0 && (
+                <List sx={{ maxHeight: 400, overflowY: 'auto' }}>
                     {filteredUsers.map((username) => (
-                        <li key={username}>
-                            <a
+                        <ListItem
+                            key={username}
+                            disablePadding
+                            divider
+                            sx={{ '&:last-child': { borderBottom: 'none' } }}
+                        >
+                            <Link
                                 href={`https://www.instagram.com/${username}/`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                sx={{
+                                    textDecoration: 'none',
+                                    color: 'inherit', // Inherit color from ListItemText
+                                    width: '100%',
+                                    p: 1, // Padding for the link area
+                                    '&:hover': {
+                                        backgroundColor: (theme) => theme.palette.action.hover,
+                                    },
+                                }}
                             >
-                                {username}
-                            </a>
-                        </li>
+                                <ListItemText primary={username} />
+                            </Link>
+                        </ListItem>
                     ))}
-                </ul>
-            </UserListContainer>
-        </>
+                </List>
+            )}
+        </Paper>
     );
 }
