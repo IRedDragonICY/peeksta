@@ -1,58 +1,13 @@
-import { createGlobalStyle } from 'styled-components';
-
-export const GlobalStyles = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-  
-  :root {
-    --primary-color: #007bff;
-    --background-light: #f9f9f9;
-    --background-dark: #1e1e1e;
-    --text-dark: #333;
-    --text-light: #e0e0e0;
-    --transition: 0.3s;
-    font-family: 'Poppins', sans-serif;
-  }
-
-  body {
-    margin: 0;
-    background: #ffffff;
-    color: var(--text-dark);
-    transition: background-color var(--transition), color var(--transition);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body {
-      background: #121212;
-      color: var(--text-light);
-    }
-  }
-
-  a {
-    color: var(--primary-color);
-    text-decoration: none;
-    transition: color var(--transition);
-  }
-
-  a:hover {
-    text-decoration: underline;
-  }
-
-  #root {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
-    position: relative;
-  }
-
-  h1 {
-    font-size: 3em;
-    margin-bottom: 0.5rem;
-  }
-
-  .info-message {
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-    line-height: 1.4;
-  }
-`;
+// This file is intentionally left blank.
+// The GlobalStyles component defined here using styled-components
+// is no longer used in the application.
+//
+// Its previous responsibilities (like setting global font, body background,
+// link styles, etc.) are now handled by:
+// 1. MUI's <CssBaseline /> component.
+// 2. The MUI ThemeProvider and the theme object defined in App.jsx,
+//    which controls fonts, colors, and other theme aspects.
+// 3. Component-level styling using MUI's `sx` prop or `styled()` utility.
+//
+// The import for GlobalStyles was removed from App.jsx in a previous step.
+// Keeping this file empty or deleting it prevents conflicts with MUI's styling.
