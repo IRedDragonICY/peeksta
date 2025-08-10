@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, createContext, useContext, useEffect } from 'react';
+import React, { useState, useRef, useCallback, createContext, useContext, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,6 +16,136 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast, Toaster } from 'react-hot-toast';
 import PropTypes from 'prop-types';
+import { ThemeProvider as MuiThemeProvider, useTheme as useMuiTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Container,
+  Paper,
+  Box,
+  Button,
+  TextField,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemAvatar,
+  Avatar,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  Card,
+  CardActionArea,
+  CardContent,
+  Stack,
+  Chip,
+  Tooltip,
+  Link,
+  Drawer,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
+  Tabs,
+  Tab,
+  Badge
+} from '@mui/material';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import {
+  Search as SearchIcon,
+  CloudUpload as CloudUploadIcon,
+  OpenInNew as OpenInNewIcon,
+  Settings as SettingsIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
+  Group as GroupIcon,
+  Description as DescriptionIcon,
+  CheckCircle as CheckCircleIconMUI,
+  ColorLens as ColorLensIcon,
+  MenuRounded,
+  Computer as ComputerIcon,
+  Info as InfoIcon,
+  GitHub as GitHubIcon,
+  Code as CodeIcon,
+  Update as UpdateIcon,
+  Storage as StorageIcon,
+  Speed as SpeedIcon,
+  LightMode as LightModeIcon,
+  DarkMode as DarkModeIcon,
+  SettingsSystemDaydream as SystemIcon
+} from '@mui/icons-material';
+import {
+  DashboardOutlined as DashboardIcon,
+  PeopleAltOutlined as PeopleIcon,
+  ChatBubbleOutline as ChatIcon,
+  Link as LinkIcon,
+  Campaign as CampaignIcon,
+  Apps as AppsIcon,
+  Insights as InsightsIcon,
+  Forum as ForumIcon,
+  Tune as TuneIcon,
+  Security as SecurityIcon,
+  Person as PersonIcon,
+  Visibility as VisibilityIcon,
+} from '@mui/icons-material';
+import { deepPurple, teal, deepOrange, pink, indigo, green, amber } from '@mui/material/colors';
+import { alpha } from '@mui/material/styles';
+import createAppTheme from './materialTheme';
+
+// Import color map for settings
+const muiColorMap = {
+  purple: { primary: deepPurple, secondary: indigo },
+  green: { primary: teal, secondary: green },
+  orange: { primary: deepOrange, secondary: amber },
+  pink: { primary: pink, secondary: deepPurple },
+  indigo: { primary: indigo, secondary: deepPurple },
+};
+import { ingestZipFile, ingestDirectoryFiles, analyzeVfs } from './ig/analysis';
+import DatasetsManager from './components/datasets/DatasetsManager.jsx';
+import {
+  listDatasets,
+  getDataset,
+  addDataset,
+  deleteDataset as idbDeleteDataset,
+  renameDataset as idbRenameDataset,
+  touchDataset,
+  generateDatasetId,
+  buildZipDataset,
+} from './storage/datasets';
+import InsightsChart from './components/charts/InsightsChart.jsx';
+import BarChart from './components/charts/BarChart.jsx';
+import PieChart from './components/charts/PieChart.jsx';
+import Section from './components/common/Section.jsx';
+import ProSidebar from './components/sidebar/ProSidebar.jsx';
+import SidebarRail from './components/sidebar/SidebarRail.jsx';
+import MiniDrawer from './components/layout/MiniDrawer.jsx';
+import StatMini from './components/common/StatMini.jsx';
+import KpiCard from './components/overview/KpiCard.jsx';
+import ActiveAppsList from './components/apps/ActiveAppsList.jsx';
+import AdsTopicsPanel from './components/ads/AdsTopicsPanel.jsx';
+import ConnectionsTables from './components/connections/ConnectionsTables.jsx';
+import {
+  OverviewPage,
+  ConnectionsPage,
+  MessagesPage,
+  LinkHistoryPage,
+  LoggedInformationPage,
+  AdsPage,
+  AppsPage,
+  InsightsPage,
+  ThreadsPage,
+  PreferencesPage,
+  PersonalPage,
+  SecurityPage,
+} from './pages';
 
 // Local Storage Helper
 const StorageHelper = {
@@ -37,6 +167,8 @@ const StorageHelper = {
     }
   }
 };
+
+const LAST_DATASET_KEY = 'peeksta_last_dataset_id';
 
 // Theme Context
 const ThemeContext = createContext();
@@ -154,9 +286,17 @@ const ThemeProvider = ({ children }) => {
     toggleSettings
   };
 
+  const muiTheme = useMemo(
+    () => createAppTheme({ mode: isDark ? 'dark' : 'light', paletteKey: currentPalette }),
+    [isDark, currentPalette]
+  );
+
   return (
     <ThemeContext.Provider value={contextValue}>
+      <MuiThemeProvider theme={muiTheme}>
+        <CssBaseline enableColorScheme />
       {children}
+      </MuiThemeProvider>
     </ThemeContext.Provider>
   );
 };
@@ -176,230 +316,827 @@ const useTheme = () => {
 // Custom Hook for Drag and Drop
 function useDragAndDrop(rootRef, onFileDrop) {
   const [isDragActive, setIsDragActive] = useState(false);
+  const dragCounter = useRef(0);
 
-  const handleDragEnter = useCallback((event) => {
+  const prevent = useCallback((event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
+  }, []);
+
+  const handleWindowDragEnter = useCallback((event) => {
+    prevent(event);
+    if (event.dataTransfer && event.dataTransfer.types && event.dataTransfer.types.includes('Files')) {
+      dragCounter.current += 1;
       setIsDragActive(true);
     }
-  }, []);
+  }, [prevent]);
 
-  const handleDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  }, []);
+  const handleWindowDragOver = useCallback((event) => {
+    prevent(event);
+  }, [prevent]);
 
-  const handleDragLeave = useCallback((event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.target === rootRef.current) {
+  const handleWindowDragLeave = useCallback((event) => {
+    prevent(event);
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
+    if (dragCounter.current === 0) {
       setIsDragActive(false);
     }
-  }, [rootRef]);
+  }, [prevent]);
 
-  const handleDrop = useCallback((event) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleWindowDrop = useCallback((event) => {
+    prevent(event);
     setIsDragActive(false);
+    dragCounter.current = 0;
 
-    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       onFileDrop(event.dataTransfer.files[0]);
       event.dataTransfer.clearData();
     }
-  }, [onFileDrop]);
+  }, [prevent, onFileDrop]);
 
   useEffect(() => {
-    const element = rootRef.current;
-    if (!element) return;
-
-    element.addEventListener('dragenter', handleDragEnter);
-    element.addEventListener('dragover', handleDragOver);
-    element.addEventListener('dragleave', handleDragLeave);
-    element.addEventListener('drop', handleDrop);
+    // Attach global listeners to prevent browser default navigation/download
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('drop', handleWindowDrop);
 
     return () => {
-      element.removeEventListener('dragenter', handleDragEnter);
-      element.removeEventListener('dragover', handleDragOver);
-      element.removeEventListener('dragleave', handleDragLeave);
-      element.removeEventListener('drop', handleDrop);
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('drop', handleWindowDrop);
     };
-  }, [rootRef, handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);
+  }, [handleWindowDragEnter, handleWindowDragOver, handleWindowDragLeave, handleWindowDrop]);
 
   return { isDragActive };
 }
 
-// Settings Panel Component
-const SettingsPanel = () => {
+// Modern Settings Dialog (Material Design You)
+const SettingsDialog = () => {
   const { isDark, toggleTheme, currentPalette, changePalette, showSettings, toggleSettings } = useTheme();
+  const theme = useMuiTheme();
+  const [themeMode, setThemeMode] = React.useState(() => {
+    const saved = localStorage.getItem('peeksta_theme_mode');
+    return saved || 'system';
+  });
+  const [activeTab, setActiveTab] = React.useState(0);
 
-  if (!showSettings) return null;
+  // System theme detection
+  React.useEffect(() => {
+    if (themeMode === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleSystemThemeChange = (e) => {
+        const systemDark = e.matches;
+        if (isDark !== systemDark) {
+          toggleTheme();
+        }
+      };
+      
+      mediaQuery.addEventListener('change', handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    }
+  }, [themeMode, isDark, toggleTheme]);
+
+  const handleThemeChange = (mode) => {
+    setThemeMode(mode);
+    localStorage.setItem('peeksta_theme_mode', mode);
+    
+    if (mode === 'system') {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark !== systemDark) toggleTheme();
+    } else if (mode === 'dark' && !isDark) {
+      toggleTheme();
+    } else if (mode === 'light' && isDark) {
+      toggleTheme();
+    }
+  };
+
+  const themeOptions = [
+    { 
+      value: 'system', 
+      label: 'System', 
+      icon: <SystemIcon />, 
+      description: 'Follow system preference',
+      color: theme.palette.info.main
+    },
+    { 
+      value: 'light', 
+      label: 'Light', 
+      icon: <LightModeIcon />, 
+      description: 'Always use light theme',
+      color: theme.palette.warning.main
+    },
+    { 
+      value: 'dark', 
+      label: 'Dark', 
+      icon: <DarkModeIcon />, 
+      description: 'Always use dark theme',
+      color: theme.palette.text.primary
+    },
+  ];
+
+  const settingsSections = [
+    {
+      title: 'Appearance',
+      icon: <ColorLensIcon />,
+      items: [
+        {
+          type: 'theme-selector',
+          title: 'Theme Mode',
+          description: 'Choose your preferred color scheme',
+        },
+        {
+          type: 'color-palette',
+          title: 'Color Palette',
+          description: 'Dynamic color system based on Material You',
+        }
+      ]
+    },
+    {
+      title: 'Privacy & Data',
+      icon: <SecurityIcon />,
+      items: [
+        {
+          type: 'info',
+          title: 'Local Processing',
+          description: 'All data is processed locally in your browser. Nothing is sent to external servers.',
+          status: 'Enabled'
+        },
+        {
+          type: 'info',
+          title: 'Data Storage',
+          description: 'Instagram data is stored securely in your browser\'s IndexedDB.',
+          status: 'Local Only'
+        }
+      ]
+    },
+    {
+      title: 'Performance',
+      icon: <TuneIcon />,
+      items: [
+        {
+          type: 'info',
+          title: 'Media Processing',
+          description: 'Configure whether to include media files in analysis for better performance.',
+          status: 'Configurable'
+        }
+      ]
+    }
+  ];
+
+  const appInfo = {
+    name: 'Peeksta',
+    version: '2.1.0',
+    description: 'Modern Instagram Analytics Dashboard',
+    github: 'https://github.com/IRedDragonICY/peeksta',
+    author: 'IRedDragonICY',
+    license: 'MIT',
+    builtWith: ['React 18', 'Material-UI v7', 'Framer Motion', 'ECharts', 'Vite', 'JSZip'],
+    releaseDate: 'January 2024',
+    features: ['Local Processing', 'Zero Server', 'Material You', 'Privacy First']
+  };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={toggleSettings}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className={`
-            w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden
-            ${isDark 
-              ? 'bg-slate-900/95 border-slate-700' 
-              : 'bg-white/95 border-gray-200'
-            }
-          `}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className={`p-6 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className={`
-                  p-2 rounded-xl
-                  ${isDark ? 'bg-slate-800' : 'bg-gray-100'}
-                `}>
-                  <Cog6ToothIcon className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-gray-600'}`} />
-                </div>
-                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Settings
-                </h2>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleSettings}
-                className={`
-                  p-2 rounded-xl transition-colors duration-200
-                  ${isDark 
-                    ? 'hover:bg-slate-800 text-slate-400 hover:text-white' 
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
-                  }
-                `}
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </motion.button>
-            </div>
-          </div>
+    <Dialog 
+      open={showSettings} 
+      onClose={toggleSettings} 
+      fullWidth 
+      maxWidth="md"
+      PaperProps={{
+        sx: {
+          borderRadius: 0, // Flat design - no rounded corners
+          maxHeight: '90vh',
+          backgroundImage: 'none',
+        }
+      }}
+    >
+      {/* Modern Header */}
+      <DialogTitle sx={{ 
+        backgroundColor: theme.palette.primary.main,
+        color: 'white',
+        p: 3,
+      }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <Box sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 0, // Flat
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <SettingsIcon sx={{ fontSize: 28 }} />
+            </Box>
+              <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>
+                Settings
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Customize your Peeksta experience
+              </Typography>
+              </Box>
+            </Stack>
+          <IconButton 
+            onClick={toggleSettings}
+            sx={{ 
+              color: 'white',
+              bgcolor: 'rgba(255,255,255,0.1)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+            }}
+          >
+            <XMarkIcon className="w-6 h-6" />
+          </IconButton>
+          </Stack>
+      </DialogTitle>
 
-          <div className="p-6 space-y-8">
-            {/* Theme Toggle */}
-            <div>
-              <label className={`block text-sm font-medium mb-4 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
-                Appearance
-              </label>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={toggleTheme}
-                className={`
-                  flex items-center justify-between w-full p-4 rounded-2xl border transition-all duration-200
-                  ${isDark 
-                    ? 'bg-slate-800 border-slate-600 hover:bg-slate-700' 
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                  }
-                `}
-              >
-                <div className="flex items-center space-x-3">
-                  <motion.div
-                    initial={false}
-                    animate={{ rotate: isDark ? 0 : 180 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {isDark ? (
-                      <MoonIcon className="w-5 h-5 text-slate-400" />
-                    ) : (
-                      <SunIcon className="w-5 h-5 text-amber-500" />
-                    )}
-                  </motion.div>
-                  <span className={isDark ? 'text-white' : 'text-gray-900'}>
-                    {isDark ? 'Dark Mode' : 'Light Mode'}
-                  </span>
-                </div>
-                <div className={`
-                  relative w-12 h-6 rounded-full transition-colors duration-300
-                  ${isDark ? 'bg-blue-600' : 'bg-gray-300'}
-                `}>
-                  <motion.div
-                    layout
-                    className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
-                    animate={{ x: isDark ? 26 : 2 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                </div>
-              </motion.button>
-            </div>
+      <DialogContent sx={{ p: 0 }}>
+        {/* Modern Tabs */}
+        <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            sx={{
+              '& .MuiTab-root': {
+                borderRadius: 0, // Flat
+                textTransform: 'none',
+                fontWeight: 600,
+                minHeight: 56,
+              }
+            }}
+          >
+            <Tab 
+              label="Appearance" 
+              icon={<ColorLensIcon />} 
+              iconPosition="start"
+              sx={{ gap: 1 }}
+            />
+            <Tab 
+              label="Privacy & Data" 
+              icon={<SecurityIcon />} 
+              iconPosition="start"
+              sx={{ gap: 1 }}
+            />
+            <Tab 
+              label="About" 
+              icon={<InfoIcon />} 
+              iconPosition="start"
+              sx={{ gap: 1 }}
+            />
+          </Tabs>
+        </Box>
 
-            {/* Color Palette */}
-            <div>
-              <label className={`block text-sm font-medium mb-4 ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
-                Color Theme
-              </label>
-              <div className="grid grid-cols-1 gap-3">
-                {Object.entries(colorPalettes).map(([key, palette]) => (
-                  <motion.button
-                    key={key}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => changePalette(key)}
-                    className={`
-                      p-4 rounded-2xl border-2 transition-all duration-200 group
-                      ${currentPalette === key
-                        ? `border-${palette.primary}-500 ${isDark ? 'bg-slate-800' : 'bg-gray-50'} shadow-lg`
-                        : `border-transparent ${isDark ? 'hover:bg-slate-800 hover:border-slate-600' : 'hover:bg-gray-50 hover:border-gray-200'}`
-                      }
-                    `}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${palette.gradients.main} shadow-lg`} />
-                        <div>
-                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {palette.name}
-                          </span>
-                          <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                            {palette.primary} • {palette.secondary} • {palette.accent}
-                          </div>
-                        </div>
-                      </div>
-                      {currentPalette === key && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className={`w-6 h-6 rounded-full bg-${palette.primary}-500 flex items-center justify-center`}
-                        >
-                          <CheckCircleIcon className="w-4 h-4 text-white" />
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+        {/* Tab Content */}
+        <Box sx={{ minHeight: 500 }}>
+          {/* Appearance Tab */}
+          {activeTab === 0 && (
+            <Box sx={{ p: 3 }}>
+              
+                            {/* Theme Mode Selector */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ComputerIcon color="primary" />
+                  Theme Mode
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Choose how you want the app to look. System mode automatically adapts to your device preferences.
+                </Typography>
+                
+                                <Stack spacing={2}>
+                  {themeOptions.map((option) => (
+                <Card
+                      key={option.value}
+                      variant="outlined"
+                  sx={{
+                        borderRadius: 0, // Material Design You flat
+                        cursor: 'pointer',
+                        border: themeMode === option.value 
+                          ? `3px solid ${theme.palette.primary.main}` 
+                          : `1px solid ${theme.palette.divider}`,
+                        bgcolor: themeMode === option.value 
+                          ? alpha(theme.palette.primary.main, 0.08) 
+                          : theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          bgcolor: themeMode === option.value 
+                            ? alpha(theme.palette.primary.main, 0.12) 
+                            : alpha(theme.palette.action.hover, 0.08),
+                          borderColor: themeMode === option.value 
+                            ? theme.palette.primary.main 
+                            : theme.palette.primary.light,
+                        }
+                      }}
+                      onClick={() => handleThemeChange(option.value)}
+                    >
+                      <CardContent sx={{ p: 3 }}>
+                        <Stack direction="row" alignItems="center" spacing={3}>
+                          {/* Icon Container */}
+                        <Box sx={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 0, // Flat
+                            backgroundColor: themeMode === option.value 
+                              ? theme.palette.primary.main 
+                              : option.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            {React.cloneElement(option.icon, { 
+                              sx: { fontSize: 28, color: 'white' } 
+                            })}
+                          </Box>
+                          
+                          {/* Content */}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+                              {option.label}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              {option.description}
+                            </Typography>
+                          </Box>
+                          
+                          {/* Selection Indicator */}
+                          {themeMode === option.value && (
+                            <Box sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 0, // Flat
+                              backgroundColor: theme.palette.primary.main,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <CheckCircleIconMUI sx={{ fontSize: 20, color: 'white' }} />
+                            </Box>
+                          )}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              </Box>
 
-            {/* Settings Info */}
-            <div className={`p-4 rounded-2xl ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-              <div className="flex items-center space-x-2 mb-2">
-                <CheckCircleIcon className={`w-4 h-4 ${isDark ? 'text-green-400' : 'text-green-500'}`} />
-                <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
-                  Settings Auto-saved
-                </span>
-              </div>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                Your preferences are automatically saved in your browser
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+              {/* Color Palette */}
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ColorLensIcon color="primary" />
+                  Color Palette
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Material You dynamic color system with adaptive colors
+                </Typography>
+                
+                                                <Stack spacing={2}>
+                  {Object.entries(colorPalettes).map(([key, pal]) => (
+                    <Card
+                      key={key}
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 0, // Material Design You flat
+                        cursor: 'pointer',
+                        border: currentPalette === key 
+                          ? `3px solid ${theme.palette.primary.main}` 
+                          : `1px solid ${theme.palette.divider}`,
+                        bgcolor: currentPalette === key 
+                          ? alpha(theme.palette.primary.main, 0.08) 
+                          : theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          bgcolor: currentPalette === key 
+                            ? alpha(theme.palette.primary.main, 0.12) 
+                            : alpha(theme.palette.action.hover, 0.08),
+                          borderColor: currentPalette === key 
+                            ? theme.palette.primary.main 
+                            : theme.palette.primary.light,
+                        }
+                      }}
+                      onClick={() => changePalette(key)}
+                    >
+                      <CardContent sx={{ p: 3 }}>
+                        <Stack direction="row" alignItems="center" spacing={3}>
+                          {/* Main Color Display */}
+                          <Stack direction="row" spacing={1}>
+                            <Box sx={{
+                              width: 48,
+                              height: 56,
+                              borderRadius: 0, // Flat
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? muiColorMap[key]?.primary[400] || deepPurple[400]
+                                : muiColorMap[key]?.primary[600] || deepPurple[600],
+                            }} />
+                            <Box sx={{
+                              width: 24,
+                              height: 56,
+                              borderRadius: 0, // Flat
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? muiColorMap[key]?.secondary[400] || indigo[400]
+                                : muiColorMap[key]?.secondary[600] || indigo[600],
+                            }} />
+                            <Box sx={{
+                              width: 12,
+                              height: 56,
+                              borderRadius: 0, // Flat
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? muiColorMap[key]?.accent?.[400] || pink[400]
+                                : muiColorMap[key]?.accent?.[600] || pink[600],
+                            }} />
+                          </Stack>
+                          
+                          {/* Color Info */}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+                              {pal.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              {pal.primary} • {pal.secondary} • {pal.accent}
+                            </Typography>
+                      </Box>
+                          
+                          {/* Selection Indicator */}
+                          {currentPalette === key && (
+                            <Box sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 0, // Flat
+                              backgroundColor: theme.palette.primary.main,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <CheckCircleIconMUI sx={{ fontSize: 20, color: 'white' }} />
+                            </Box>
+                          )}
+                        </Stack>
+                    </CardContent>
+                </Card>
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
+          )}
+
+          {/* Privacy & Data Tab */}
+          {activeTab === 1 && (
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SecurityIcon color="primary" />
+                Privacy & Data Protection
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Your privacy is our priority. All processing happens locally on your device.
+              </Typography>
+              
+              {settingsSections[1].items.map((item, index) => {
+                const icons = [<SecurityIcon />, <StorageIcon />];
+                const colors = [theme.palette.success.main, theme.palette.info.main];
+                
+                return (
+                  <Box key={index} sx={{ 
+                    mb: 2, 
+                    p: 3, 
+                    bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                    border: `2px solid ${colors[index]}`,
+                    borderRadius: 0 // Material Design You flat
+                  }}>
+                    <Stack direction="row" spacing={3} alignItems="center">
+                      <Box sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 0, // Flat
+                        backgroundColor: colors[index],
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        {React.cloneElement(icons[index], { sx: { fontSize: 28, color: 'white' } })}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
+                          {item.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, mb: 1 }}>
+                          {item.description}
+                        </Typography>
+                        <Chip 
+                          label={item.status} 
+                          color="success" 
+                          variant="filled"
+                          sx={{ 
+                            borderRadius: 0, // Flat
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            height: 28
+                          }}
+                        />
+                      </Box>
+                    </Stack>
+                  </Box>
+            );
+          })}
+
+              {/* Additional Privacy Features */}
+              <Box sx={{ 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'success.50',
+                border: `2px solid ${theme.palette.success.main}`,
+                borderRadius: 0 // Material Design You flat
+              }}>
+                <Stack direction="row" spacing={3} alignItems="center">
+                  <Box sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 0, // Flat
+                    backgroundColor: theme.palette.success.main,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <StorageIcon sx={{ fontSize: 28, color: 'white' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5, color: 'success.main' }}>
+                      Zero Server Communication
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                      Your Instagram data never leaves your browser. Everything is processed locally using modern web technologies.
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Box>
+            </Box>
+          )}
+
+          {/* About Tab */}
+          {activeTab === 2 && (
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <InfoIcon color="primary" />
+                About Peeksta
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Modern Instagram analytics dashboard built with privacy in mind.
+              </Typography>
+
+              {/* App Info Grid */}
+              <Grid container spacing={3}>
+                                <Grid item xs={12} md={6}>
+                  <Box sx={{ 
+                    p: 3, 
+                    bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                    border: `2px solid ${theme.palette.warning.main}`,
+                    borderRadius: 0 // Material Design You flat
+                  }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                      <Box sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 0, // Flat
+                        backgroundColor: theme.palette.warning.main,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <UpdateIcon sx={{ fontSize: 24, color: 'white' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: 'warning.main' }}>
+                        Version Information
+                      </Typography>
+                    </Stack>
+                    <Stack spacing={2}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Current Version</Typography>
+                        <Chip 
+                          label={`v${appInfo.version}`} 
+                          color="warning" 
+                          variant="filled"
+                          sx={{ borderRadius: 0, fontWeight: 700, fontSize: '0.8rem' }}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Release Date</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {appInfo.releaseDate}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>License</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {appInfo.license}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+        </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ 
+                    p: 3, 
+                    bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                    border: `2px solid ${theme.palette.secondary.main}`,
+                    borderRadius: 0 // Material Design You flat
+                  }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                      <Box sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 0, // Flat
+                        backgroundColor: theme.palette.secondary.main,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <CodeIcon sx={{ fontSize: 24, color: 'white' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: 'secondary.main' }}>
+                        Technology Stack
+                      </Typography>
+                    </Stack>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {appInfo.builtWith.map((tech) => (
+                        <Chip 
+                          key={tech}
+                          label={tech} 
+                          size="small" 
+                          color="secondary"
+                          variant="filled"
+                          sx={{ 
+                            borderRadius: 0, // Flat
+                            fontWeight: 700,
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Box sx={{ 
+                    p: 3, 
+                    bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : alpha(theme.palette.primary.main, 0.05),
+                    border: `2px solid ${theme.palette.primary.main}`,
+                    borderRadius: 0 // Material Design You flat
+                  }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={3}>
+                      <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+                        <Box sx={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: 0, // Flat
+                          backgroundColor: theme.palette.primary.main,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <GitHubIcon sx={{ fontSize: 28, color: 'white' }} />
+                        </Box>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5, color: 'primary.main' }}>
+                            Open Source Project
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, lineHeight: 1.6 }}>
+                            Peeksta is open source! View the code, report bugs, request features, or contribute.
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                            {appInfo.github}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        startIcon={<ArrowTopRightOnSquareIcon className="w-4 h-4" />}
+                        href={appInfo.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ 
+                          borderRadius: 0, // Flat
+                          textTransform: 'none',
+                          fontWeight: 700,
+                          px: 4,
+                          py: 1.5,
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        View on GitHub
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Grid>
+
+                {/* System Information */}
+                <Grid item xs={12}>
+                  <Box sx={{ 
+                    p: 3, 
+                    bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                    border: `2px solid ${theme.palette.info.main}`,
+                    borderRadius: 0 // Material Design You flat
+                  }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                      <Box sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 0, // Flat
+                        backgroundColor: theme.palette.info.main,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <SpeedIcon sx={{ fontSize: 24, color: 'white' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800, color: 'info.main' }}>
+                        System Information
+                      </Typography>
+                    </Stack>
+                    
+                    <Grid container spacing={3}>
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Browser
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                            {navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                             navigator.userAgent.includes('Firefox') ? 'Firefox' : 
+                             navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Platform
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                            {navigator.platform}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Resolution
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                            {screen.width} × {screen.height}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            Color Depth
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                            {screen.colorDepth}-bit
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </Box>
+      </DialogContent>
+
+      {/* Footer Actions */}
+      <DialogActions sx={{ 
+        p: 3, 
+        bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+        borderTop: `2px solid ${theme.palette.primary.main}`
+      }}>
+        <Stack direction="row" spacing={3} alignItems="center" sx={{ width: '100%' }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {appInfo.name} v{appInfo.version}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+              © 2024 {appInfo.author} • Made with ❤️ for Instagram users
+            </Typography>
+          </Box>
+          <Button 
+            onClick={toggleSettings} 
+            variant="contained"
+            sx={{ 
+              borderRadius: 0, // Material Design You flat
+              px: 4, 
+              py: 1.5,
+              fontWeight: 800,
+              fontSize: '0.9rem',
+              textTransform: 'uppercase',
+              letterSpacing: 1
+            }}
+          >
+            Done
+          </Button>
+        </Stack>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -483,110 +1220,111 @@ const Header = () => {
   );
 };
 
-// Upload Area Component
-const UploadArea = ({ isDragActive, onFileChange, isProcessing }) => {
-  const { isDark, palette } = useTheme();
+// Upload Area Component (MUI)
+const UploadArea = ({ isDragActive, onFileChange, onFolderChange, isProcessing }) => {
+  const muiTheme = useMuiTheme();
+  const folderInputRef = useRef(null);
+  const triggerFolderPicker = useCallback(() => {
+    if (folderInputRef.current) {
+      folderInputRef.current.click();
+    }
+  }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`
-        relative border-2 border-dashed rounded-3xl p-12 mb-8 transition-all duration-300 backdrop-blur-sm cursor-pointer group
-        ${isDragActive 
-          ? `border-${palette.primary}-400 shadow-2xl shadow-${palette.primary}-500/25 ${isDark ? `bg-${palette.primary}-500/10` : `bg-${palette.primary}-50`}` 
-          : `${isDark ? 'border-slate-600 bg-slate-800/50 hover:border-' + palette.primary + '-500 hover:bg-slate-800/80' : 'border-gray-300 bg-gray-50/50 hover:border-' + palette.primary + '-400 hover:bg-gray-100/80'}`
-        }
-      `}
+    <Paper
+      variant="outlined"
+      sx={{
+        position: 'relative',
+        p: { xs: 4, sm: 6 },
+        mb: 3,
+        borderStyle: 'dashed',
+        borderRadius: 3,
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'all .2s',
+        bgcolor: isDragActive ? (muiTheme.palette.mode === 'dark' ? 'action.hover' : 'primary.50') : 'background.paper',
+      }}
     >
       <input
         type="file"
         accept=".zip"
         onChange={onFileChange}
         disabled={isProcessing}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
       />
-
-      <div className="text-center">
-        <motion.div
-          animate={isDragActive ? { scale: 1.1 } : { scale: 1 }}
-          className={`
-            w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg
-            ${isDragActive 
-              ? `bg-${palette.primary}-500 shadow-${palette.primary}-500/50` 
-              : `${isDark ? 'bg-slate-700 group-hover:bg-' + palette.primary + '-600' : 'bg-gray-200 group-hover:bg-' + palette.primary + '-500 group-hover:text-white'}`
-            }
-          `}
-        >
+      {/* Hidden folder input for directory uploads */}
+      <input
+        type="file"
+        webkitdirectory="true"
+        directory="true"
+        multiple
+        onChange={onFolderChange}
+        disabled={isProcessing}
+        style={{ display: 'none' }}
+        ref={folderInputRef}
+      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <Box sx={{
+          width: 80,
+          height: 80,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText'
+        }}>
           {isProcessing ? (
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-3 border-white border-t-transparent rounded-full"
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              style={{ width: 32, height: 32, border: '3px solid white', borderTopColor: 'transparent', borderRadius: '50%' }}
             />
           ) : (
-            <CloudArrowUpIcon className="w-10 h-10 text-white" />
+            <CloudUploadIcon fontSize="large" />
           )}
-        </motion.div>
-
-        <h3 className={`text-2xl font-semibold mb-3 ${isDark ? 'text-slate-200' : 'text-gray-800'}`}>
-          {isProcessing ? 'Processing your file...' : 'Upload your Instagram data'}
-        </h3>
-
-        <p className={isDark ? 'text-slate-400' : 'text-gray-600'}>
-          {isDragActive
-            ? 'Drop your ZIP file here'
-            : 'Drag and drop your ZIP file here or click to browse'
-          }
-        </p>
-      </div>
-    </motion.div>
+        </Box>
+        <Typography variant="h6">
+          {isProcessing ? 'Processing your data...' : 'Upload your Instagram export'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {isDragActive ? 'Drop your ZIP here' : 'Drag & drop ZIP here, or click to browse (ZIP)'}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Or load a folder export (Settings &gt; Accounts center &gt; Your information &gt; Download information)
+        </Typography>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<CloudUploadIcon />}
+          onClick={triggerFolderPicker}
+          sx={{ mt: 1 }}
+          disabled={isProcessing}
+        >
+          Load Folder
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 
 UploadArea.propTypes = {
   isDragActive: PropTypes.bool.isRequired,
   onFileChange: PropTypes.func.isRequired,
+  onFolderChange: PropTypes.func.isRequired,
   isProcessing: PropTypes.bool.isRequired,
 };
 
-// Stats Card Component
+// Stats Card Component (MUI)
 const StatsCard = ({ count }) => {
-  const { isDark, palette } = useTheme();
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`
-        rounded-3xl p-8 mb-8 border shadow-2xl
-        ${isDark 
-          ? 'bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700' 
-          : 'bg-gradient-to-br from-white to-gray-50 border-gray-200'
-        }
-      `}
-    >
-      <div className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-        >
-          <UserGroupIcon className={`w-16 h-16 text-${palette.primary}-500 mx-auto mb-6`} />
-        </motion.div>
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 100, delay: 0.2 }}
-          className={`text-5xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
-        >
-          {count.toLocaleString()}
-        </motion.div>
-        <p className={`font-medium text-lg ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
-          {count === 1 ? 'User' : 'Users'} not following back
-        </p>
-      </div>
-    </motion.div>
+    <Paper variant="outlined" sx={{ p: 4, mb: 3, textAlign: 'center', borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <GroupIcon color="primary" sx={{ fontSize: 56 }} />
+      </Box>
+      <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>{count.toLocaleString()}</Typography>
+      <Typography color="text.secondary">{count === 1 ? 'User' : 'Users'} not following back</Typography>
+    </Paper>
   );
 };
 
@@ -594,28 +1332,24 @@ StatsCard.propTypes = {
   count: PropTypes.number.isRequired,
 };
 
-// Search Input Component
+// Search Input Component (MUI)
 const SearchInput = ({ searchTerm, onSearchChange }) => {
-  const { isDark, palette } = useTheme();
-
   return (
-    <div className="relative mb-8">
-      <MagnifyingGlassIcon className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 ${isDark ? 'text-slate-400' : 'text-gray-500'}`} />
-      <input
-        type="text"
-        placeholder="Search users..."
+    <Box sx={{ mb: 3 }}>
+      <TextField
+        fullWidth
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
-        className={`
-          w-full pl-12 pr-4 py-4 rounded-2xl border transition-all duration-200 text-lg
-          ${isDark 
-            ? `bg-slate-800 border-slate-600 text-white placeholder-slate-400 focus:border-${palette.primary}-500` 
-            : `bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-${palette.primary}-500`
-          } 
-          focus:outline-none focus:ring-2 focus:ring-${palette.primary}-500/20
-        `}
+        placeholder="Search users..."
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        }}
       />
-    </div>
+    </Box>
   );
 };
 
@@ -624,72 +1358,33 @@ SearchInput.propTypes = {
   onSearchChange: PropTypes.func.isRequired,
 };
 
-// User List Component
+// User List Component (MUI)
 const UserList = ({ users }) => {
-  const { isDark, palette } = useTheme();
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={`
-        rounded-3xl border overflow-hidden shadow-2xl
-        ${isDark 
-          ? 'bg-slate-800 border-slate-700' 
-          : 'bg-white border-gray-200'
-        }
-      `}
-    >
-      <div className="max-h-96 overflow-y-auto">
-        <AnimatePresence>
-          {users.map((username, index) => (
-            <motion.div
+    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
+      <List disablePadding dense sx={{ maxHeight: 384, overflow: 'auto' }}>
+        {users.map((username) => (
+          <ListItemButton
               key={username}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ delay: index * 0.05 }}
-              className={`border-b last:border-b-0 ${isDark ? 'border-slate-700' : 'border-gray-100'}`}
-            >
-              <motion.a
-                whileHover={{ x: 4 }}
+            component="a"
                 href={`https://www.instagram.com/${username}/`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`
-                  flex items-center justify-between p-5 transition-all duration-200 group
-                  ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-50'}
-                `}
+            divider
               >
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${palette.gradients.card} rounded-2xl flex items-center justify-center shadow-lg`}>
-                    <span className="text-white font-bold text-lg">
+            <ListItemAvatar>
+              <Avatar sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                       {username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span className={`
-                    font-medium text-lg transition-colors duration-200
-                    ${isDark 
-                      ? `text-white group-hover:text-${palette.primary}-300` 
-                      : `text-gray-900 group-hover:text-${palette.primary}-600`
-                    }
-                  `}>
-                    @{username}
-                  </span>
-                </div>
-                <ArrowTopRightOnSquareIcon className={`
-                  w-6 h-6 transition-all duration-200 group-hover:scale-110
-                  ${isDark 
-                    ? `text-slate-400 group-hover:text-${palette.primary}-400` 
-                    : `text-gray-500 group-hover:text-${palette.primary}-500`
-                  }
-                `} />
-              </motion.a>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+              </Avatar>
+            </ListItemAvatar>
+            <ListItemText primary={`@${username}`} />
+            <IconButton edge="end" aria-label="open profile">
+              <OpenInNewIcon />
+            </IconButton>
+          </ListItemButton>
+        ))}
+      </List>
+    </Paper>
   );
 };
 
@@ -697,77 +1392,142 @@ UserList.propTypes = {
   users: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
-// No Users Message Component
+// No Users Message Component (MUI)
 const NoUsersMessage = () => {
-  const { isDark } = useTheme();
-
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className={`
-        text-center py-20 px-8 rounded-3xl border
-        ${isDark 
-          ? 'bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-green-700/30' 
-          : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200/50'
-        }
-      `}
-    >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-      >
-        <CheckCircleIcon className={`w-20 h-20 mx-auto mb-8 ${isDark ? 'text-green-400' : 'text-green-500'}`} />
-      </motion.div>
-      <h3 className={`text-3xl font-bold mb-3 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+    <Paper variant="outlined" sx={{ textAlign: 'center', py: 8, px: 4, borderRadius: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <CheckCircleIconMUI color="success" sx={{ fontSize: 64 }} />
+      </Box>
+      <Typography variant="h5" color="success.main" sx={{ fontWeight: 700, mb: 1 }}>
         Perfect! 🎉
-      </h3>
-      <p className={`text-xl ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
-        All users are following you back!
-      </p>
-    </motion.div>
+      </Typography>
+      <Typography color="text.secondary">All users are following you back!</Typography>
+    </Paper>
   );
 };
 
-// Drag Overlay Component
+// Drag Overlay Component (MUI)
 const DragOverlay = () => {
-  const { isDark, palette } = useTheme();
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-md z-40 flex items-center justify-center"
+    <Box
+      sx={{
+        position: 'fixed',
+        inset: 0,
+        bgcolor: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)',
+        zIndex: (theme) => theme.zIndex.modal,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        className={`
-          rounded-3xl p-16 border-2 border-dashed shadow-2xl text-center max-w-md mx-4
-          ${isDark 
-            ? `bg-gradient-to-br from-${palette.primary}-900 to-${palette.secondary}-900 border-${palette.primary}-400` 
-            : `bg-gradient-to-br from-${palette.primary}-100 to-${palette.secondary}-100 border-${palette.primary}-400`
-          }
-        `}
-      >
-        <motion.div
-          animate={{ y: [0, -10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <DocumentIcon className={`w-24 h-24 mx-auto mb-8 ${isDark ? `text-${palette.primary}-300` : `text-${palette.primary}-600`}`} />
+      <Paper variant="outlined" sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+          <DescriptionIcon color="primary" sx={{ fontSize: 96, mb: 2 }} />
         </motion.div>
-        <h2 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Drop your ZIP file here
-        </h2>
-        <p className={`text-xl ${isDark ? `text-${palette.primary}-200` : `text-${palette.primary}-700`}`}>
-          Release to upload your Instagram data
-        </p>
-      </motion.div>
-    </motion.div>
+        <Typography variant="h5" sx={{ mb: 1 }}>Drop your ZIP file here</Typography>
+        <Typography color="text.secondary">Release to upload your Instagram data</Typography>
+      </Paper>
+    </Box>
   );
+};
+
+// Media Choice Dialog Component (MUI)
+const MediaChoiceDialog = ({ open, onChoice, fileName }) => {
+  return (
+    <Dialog open={open} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <VisibilityIcon color="primary" />
+        Media Upload Options
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="h6" gutterBottom>
+          How would you like to process your Instagram data?
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          File: <strong>{fileName}</strong>
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Card 
+              variant="outlined" 
+              sx={{ 
+                p: 2, 
+                textAlign: 'center', 
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+              onClick={() => onChoice(false)}
+            >
+              <Box sx={{ mb: 2 }}>
+                <CheckCircleIcon color="success" sx={{ fontSize: 48 }} />
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Bandwidth Saving
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Analyze data without media content. Faster processing and less bandwidth usage.
+              </Typography>
+              <Chip 
+                label="Recommended" 
+                color="success" 
+                size="small" 
+                sx={{ mt: 1 }}
+              />
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Card 
+              variant="outlined" 
+              sx={{ 
+                p: 2, 
+                textAlign: 'center', 
+                cursor: 'pointer',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+              onClick={() => onChoice(true)}
+            >
+              <Box sx={{ mb: 2 }}>
+                <VisibilityIcon color="primary" sx={{ fontSize: 48 }} />
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Include Media
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Process with full media content including images and videos for complete analysis.
+              </Typography>
+              <Chip 
+                label="Full Analysis" 
+                color="primary" 
+                size="small" 
+                sx={{ mt: 1 }}
+              />
+            </Card>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
+          You can change this setting later in the analysis page
+        </Typography>
+        <Button onClick={() => onChoice(false)} color="success" variant="contained">
+          Skip Media
+        </Button>
+        <Button onClick={() => onChoice(true)} color="primary" variant="contained">
+          Include Media
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+MediaChoiceDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onChoice: PropTypes.func.isRequired,
+  fileName: PropTypes.string,
 };
 
 // Main App Component
@@ -776,7 +1536,89 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploaded, setIsUploaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [advanced, setAdvanced] = useState(null); // full analytics result
+  const [progressText, setProgressText] = useState('');
   const rootRef = useRef(null);
+  const folderInputRef = useRef(null);
+  const [activeSection, setActiveSection] = useState(() => {
+    try {
+      return localStorage.getItem('peeksta_active_section') || 'overview';
+    } catch (_) {
+      return 'overview';
+    }
+  });
+  const [datasets, setDatasets] = useState([]);
+  const [datasetsLoading, setDatasetsLoading] = useState(false);
+  const restoreOnceRef = useRef(false);
+  const [showMediaDialog, setShowMediaDialog] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [includeMediaGlobal, setIncludeMediaGlobal] = useState(false);
+  const [currentDatasetId, setCurrentDatasetId] = useState(() => {
+    try { return localStorage.getItem(LAST_DATASET_KEY) || null; } catch (_) { return null; }
+  });
+
+  const processFileWithMedia = useCallback(async (file, includeMedia = false) => {
+    setIsProcessing(true);
+    const loadingToastId = 'processing-upload';
+    toast.loading('Processing your Instagram data...', { id: loadingToastId });
+
+    try {
+      // Advanced pipeline: ingest ZIP -> analyze
+      const vfs = await ingestZipFile(file, (p, stage) => {
+        if (stage) setProgressText(stage);
+      });
+      const analysis = await analyzeVfs(vfs, (_p, stage) => {
+        if (stage) setProgressText(stage);
+      });
+
+      // Store media preference in analysis
+      analysis.includeMedia = includeMedia;
+      setIncludeMediaGlobal(includeMedia);
+
+      setAdvanced(analysis);
+      setNotFollowingBack(analysis.notFollowingBack || []);
+      setIsUploaded(true);
+
+      // Save dataset to IndexedDB for persistence
+      try {
+        const id = generateDatasetId();
+        const ds = buildZipDataset({
+          id,
+          name: analysis?.profile?.username ? `${analysis.profile.username} (${file.name})` : file.name,
+          fileName: file.name,
+          blob: file,
+          meta: { 
+            username: analysis?.profile?.username || '',
+            includeMedia: includeMedia
+          },
+        });
+        await addDataset(ds);
+        // Cache analysis for instant reload next time
+        try {
+          const { cacheAnalysis } = await import('./storage/datasets');
+          await cacheAnalysis(id, analysis);
+        } catch (_) {}
+        await touchDataset(id);
+        try { localStorage.setItem(LAST_DATASET_KEY, id); setCurrentDatasetId(id); } catch (_) {}
+        // Refresh list after save
+        try {
+          const items = await listDatasets();
+          setDatasets(items);
+        } catch (_) {}
+      } catch (e) {
+        // non-fatal
+        // console.warn('Failed to persist dataset', e);
+      }
+
+      const mediaText = includeMedia ? ' (with media)' : ' (media-free)';
+      toast.success(`Found ${analysis.notFollowingBack?.length || 0} users not following back!${mediaText}`, { id: loadingToastId });
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast.error('Error processing file. Please ensure your ZIP file is valid.', { id: loadingToastId });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
 
   const processFile = useCallback(async (file) => {
     if (!file || !file.name.endsWith('.zip')) {
@@ -786,53 +1628,18 @@ function App() {
       return;
     }
 
-    setIsProcessing(true);
-    const loadingToast = toast.loading('Processing your Instagram data...');
-
-    try {
-      const zip = await JSZip.loadAsync(file);
-
-      const followersFile = zip.file(/followers_1\.json$/i)[0];
-      const followersList = followersFile
-        ? JSON.parse(await followersFile.async('string')).map((item) =>
-            item.string_list_data[0].value.toLowerCase()
-          )
-        : [];
-
-      const followingFile = zip.file(/following\.json$/i)[0];
-      const followingList = followingFile
-        ? JSON.parse(await followingFile.async('string')).relationships_following.map((item) =>
-            item.string_list_data[0].value.toLowerCase()
-          )
-        : [];
-
-      const notFollowingBackList = followingList.filter(
-        (username) => !followersList.includes(username)
-      );
-
-      setNotFollowingBack(notFollowingBackList);
-      setIsUploaded(true);
-
-      toast.success(
-        `Found ${notFollowingBackList.length} users not following back!`,
-        {
-          id: loadingToast,
-          icon: React.createElement(CheckCircleIcon, { className: "w-5 h-5" }),
-        }
-      );
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast.error(
-        'Error processing file. Please ensure your ZIP file is valid.',
-        {
-          id: loadingToast,
-          icon: React.createElement(ExclamationTriangleIcon, { className: "w-5 h-5" }),
-        }
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    // Show media inclusion dialog
+    setPendingFile(file);
+    setShowMediaDialog(true);
   }, []);
+
+  const handleMediaChoice = useCallback((includeMedia) => {
+    setShowMediaDialog(false);
+    if (pendingFile) {
+      processFileWithMedia(pendingFile, includeMedia);
+      setPendingFile(null);
+    }
+  }, [pendingFile, processFileWithMedia]);
 
   const handleFileChange = useCallback((event) => {
     const file = event.target.files[0];
@@ -840,9 +1647,41 @@ function App() {
       setNotFollowingBack([]);
       setSearchTerm('');
       setIsUploaded(false);
+      setAdvanced(null);
       processFile(file);
     }
   }, [processFile]);
+
+  const handleFolderChange = useCallback(async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    setIsProcessing(true);
+    const loadingToastId = 'processing-folder';
+    toast.loading('Processing your Instagram folder...', { id: loadingToastId });
+    try {
+      const vfs = await ingestDirectoryFiles(files, (p, stage) => {
+        if (stage) setProgressText(stage);
+      });
+      const analysis = await analyzeVfs(vfs, (_p, stage) => {
+        if (stage) setProgressText(stage);
+      });
+      setAdvanced(analysis);
+      setNotFollowingBack(analysis.notFollowingBack || []);
+      setIsUploaded(true);
+      toast.success(`Found ${analysis.notFollowingBack?.length || 0} users not following back!`, { id: loadingToastId });
+    } catch (error) {
+      console.error('Error processing folder:', error);
+      toast.error('Error processing folder.', { id: loadingToastId });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  const triggerFolderPicker = useCallback(() => {
+    if (folderInputRef.current) {
+      folderInputRef.current.click();
+    }
+  }, []);
 
   const onFileDrop = useCallback((file) => {
     setNotFollowingBack([]);
@@ -857,11 +1696,123 @@ function App() {
     username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const refreshDatasets = useCallback(async () => {
+    setDatasetsLoading(true);
+    try {
+      const items = await listDatasets();
+      setDatasets(items);
+    } finally {
+      setDatasetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDatasets();
+  }, [refreshDatasets]);
+
+  const handleLoadDataset = useCallback(async (datasetId) => {
+    try {
+      const ds = await getDataset(datasetId);
+      if (!ds) return;
+      setIsProcessing(true);
+      const loadingToastId = 'loading-dataset';
+      toast.loading('Loading dataset...', { id: loadingToastId });
+      let analysis = null;
+      if (ds.analysis) {
+        analysis = ds.analysis;
+      } else if (ds.type === 'zip' && ds.blob) {
+        const vfs = await ingestZipFile(ds.blob, (p, stage) => { if (stage) setProgressText(stage); });
+        analysis = await analyzeVfs(vfs, (_p, stage) => { if (stage) setProgressText(stage); });
+      } else if (ds.type === 'vfs' && Array.isArray(ds.vfs)) {
+        const vfs = new Map(ds.vfs);
+        analysis = await analyzeVfs(vfs, (_p, stage) => { if (stage) setProgressText(stage); });
+      }
+      if (analysis) {
+        setAdvanced(analysis);
+        setNotFollowingBack(analysis.notFollowingBack || []);
+        setIsUploaded(true);
+        setCurrentDatasetId(ds.id);
+        try { localStorage.setItem(LAST_DATASET_KEY, ds.id); } catch (_) {}
+        await touchDataset(ds.id);
+        toast.success('Dataset loaded', { id: loadingToastId });
+        await refreshDatasets();
+      } else {
+        toast.error('Failed to load dataset', { id: loadingToastId });
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Error loading dataset');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [refreshDatasets]);
+
+  const handleDeleteDataset = useCallback(async (datasetId) => {
+    try {
+      await idbDeleteDataset(datasetId);
+      if (currentDatasetId === datasetId) {
+        // Reset app state when deleting the dataset in use
+        setAdvanced(null);
+        setIsUploaded(false);
+        setNotFollowingBack([]);
+        setSearchTerm('');
+        setCurrentDatasetId(null);
+        try { localStorage.removeItem(LAST_DATASET_KEY); } catch (_) {}
+        // Switch to datasets section for clarity
+        setActiveSection('datasets');
+      }
+      await refreshDatasets();
+      toast.success('Dataset deleted');
+    } catch (e) {
+      toast.error('Failed to delete dataset');
+    }
+  }, [currentDatasetId, refreshDatasets]);
+
+  const handleRenameDataset = useCallback(async (datasetId, newName) => {
+    await idbRenameDataset(datasetId, newName);
+    await refreshDatasets();
+  }, [refreshDatasets]);
+
+  // Fast restore of last used dataset on app load for better UX
+  useEffect(() => {
+    (async () => {
+      if (restoreOnceRef.current) return;
+      restoreOnceRef.current = true;
+      try {
+        const lastId = StorageHelper.getItem(LAST_DATASET_KEY, null) || localStorage.getItem(LAST_DATASET_KEY);
+        if (!lastId) return;
+        const ds = await getDataset(lastId);
+        if (!ds) return;
+        if (ds.analysis) {
+          // Instant hydrate without heavy processing
+          setAdvanced(ds.analysis);
+          setNotFollowingBack(ds.analysis.notFollowingBack || []);
+          setIsUploaded(true);
+          setCurrentDatasetId(ds.id);
+          await touchDataset(ds.id);
+          refreshDatasets();
+          return;
+        }
+        // Fallback to normal loader
+        await handleLoadDataset(lastId);
+      } catch (_) {
+        // ignore restore errors
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist active section
+  useEffect(() => {
+    try { localStorage.setItem('peeksta_active_section', activeSection); } catch (_) {}
+  }, [activeSection]);
+
   return (
     <ThemeProvider>
       <AppContent
         isDragActive={isDragActive}
         handleFileChange={handleFileChange}
+        handleFolderChange={handleFolderChange}
         isProcessing={isProcessing}
         isUploaded={isUploaded}
         notFollowingBack={notFollowingBack}
@@ -869,6 +1820,22 @@ function App() {
         setSearchTerm={setSearchTerm}
         filteredUsers={filteredUsers}
         rootRef={rootRef}
+        advanced={advanced}
+        progressText={progressText}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        datasets={datasets}
+        datasetsLoading={datasetsLoading}
+        refreshDatasets={refreshDatasets}
+        onLoadDataset={handleLoadDataset}
+        onDeleteDataset={handleDeleteDataset}
+        onRenameDataset={handleRenameDataset}
+        showMediaDialog={showMediaDialog}
+        pendingFile={pendingFile}
+        handleMediaChoice={handleMediaChoice}
+        includeMediaGlobal={includeMediaGlobal}
+        currentDatasetId={currentDatasetId}
+        isNavDisabled={!isUploaded}
       />
     </ThemeProvider>
   );
@@ -877,100 +1844,196 @@ function App() {
 const AppContent = ({
   isDragActive,
   handleFileChange,
+  handleFolderChange,
   isProcessing,
   isUploaded,
   notFollowingBack,
   searchTerm,
   setSearchTerm,
   filteredUsers,
-  rootRef
+  rootRef,
+  advanced,
+  progressText,
+  activeSection,
+  setActiveSection,
+  datasets,
+  datasetsLoading,
+  refreshDatasets,
+  onLoadDataset,
+  onDeleteDataset,
+  onRenameDataset,
+  showMediaDialog,
+  pendingFile,
+  handleMediaChoice,
+  includeMediaGlobal,
+  currentDatasetId,
+  isNavDisabled,
 }) => {
-  const { isDark, palette } = useTheme();
+  const { isDark, toggleTheme, toggleSettings } = useTheme();
 
   return (
-    <div className={`
-      min-h-screen transition-all duration-500
-      ${isDark 
-        ? `bg-gradient-to-br ${palette.gradients.background} text-white` 
-        : `bg-gradient-to-br ${palette.gradients.backgroundLight} text-gray-900`
-      }
-    `}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
           style: {
-            background: isDark ? '#1e293b' : '#ffffff',
-            color: isDark ? '#f8fafc' : '#1e293b',
-            border: `1px solid ${isDark ? '#475569' : '#e2e8f0'}`,
+            background: isDark ? '#101528' : '#ffffff',
+            color: isDark ? '#E6EAF2' : '#101528',
+            border: `1px solid ${isDark ? '#24304A' : '#e2e8f0'}`,
             borderRadius: '16px',
           },
         }}
       />
 
-      <SettingsPanel />
+      <SettingsDialog />
 
-      <div className="container mx-auto px-4 py-12" ref={rootRef}>
-        <div className="max-w-4xl mx-auto">
-          <Header />
+      <MiniDrawer
+        title="Peeksta"
+        activeSection={activeSection}
+        onSelect={(key) => {
+          if (isNavDisabled && !['overview', 'datasets'].includes(key)) return;
+          setActiveSection(key);
+        }}
+        renderHeaderActions={() => (
+          <>
+            <IconButton color="inherit" onClick={toggleSettings} aria-label="open settings">
+              <SettingsIcon />
+            </IconButton>
+          </>
+        )}
+        isItemDisabled={(key) => isNavDisabled && !['overview', 'datasets'].includes(key)}
+      >
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className={`
-              rounded-3xl border shadow-2xl p-8 md:p-12 backdrop-blur-xl
-              ${isDark 
-                ? 'bg-slate-800/50 border-slate-700' 
-                : 'bg-white/50 border-gray-200'
-              }
-            `}
-          >
+      <Container
+        maxWidth="lg"
+        sx={{
+          py: { xs: 3, md: 6 },
+          '& .MuiPaper-root:empty': { display: 'none' },
+        }}
+        ref={rootRef}
+      >
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
             {!isUploaded && (
-              <UploadArea
-                isDragActive={isDragActive}
-                onFileChange={handleFileChange}
-                isProcessing={isProcessing}
-              />
-            )}
-
-            <AnimatePresence mode="wait">
-              {isUploaded && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <StatsCard count={notFollowingBack.length} />
-
-                  {notFollowingBack.length > 0 ? (
-                    <>
-                      <SearchInput
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                      />
-                      <UserList users={filteredUsers} />
-                    </>
-                  ) : (
-                    <NoUsersMessage />
-                  )}
-                </motion.div>
+                <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
               )}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </div>
+            {!!progressText && !isUploaded && (
+              <Typography variant="caption" color="text.secondary">{progressText}</Typography>
+            )}
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <Stack spacing={3}>
+              {activeSection === 'datasets' && (
+                <DatasetsManager
+                  datasets={datasets}
+                  loading={datasetsLoading}
+                  onRefresh={refreshDatasets}
+                  onLoad={onLoadDataset}
+                  onDelete={onDeleteDataset}
+                  onRename={onRenameDataset}
+                  currentId={currentDatasetId}
+                />
+              )}
+              {(!isUploaded) && (
+                <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>How it works</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Export your Instagram data (ZIP or folder) then drop the ZIP here. We process it locally in your browser; no data leaves your device.
+                    </Typography>
+                  </CardContent>
+                </Card>
+              )}
+              {(!isUploaded) && (
+                <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                      <ColorLensIcon color="primary" />
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Material You</Typography>
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Dynamic color system with accessible contrast and soft shapes.
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Chip label="Responsive" size="small" color="primary" variant="outlined" />
+                      <Chip label="Modern" size="small" color="primary" variant="outlined" />
+                      <Chip label="Accessible" size="small" color="primary" variant="outlined" />
+                    </Stack>
+                  </CardContent>
+                </Card>
+              )}
+              {isUploaded && advanced && activeSection === 'overview' && (
+                <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
 
-      <AnimatePresence>
-        {isDragActive && <DragOverlay />}
-      </AnimatePresence>
-    </div>
+              {isUploaded && advanced && activeSection === 'connections' && (
+                <ConnectionsPage advanced={advanced} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'messages' && (
+                <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'link-history' && (
+                <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'logged-information' && (
+                <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'ads' && (
+                <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'apps' && (
+                <AppsPage advanced={advanced} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'insights' && (
+                <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'threads' && (
+                <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'preferences' && (
+                <PreferencesPage advanced={advanced} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'security' && (
+                <SecurityPage advanced={advanced} />
+              )}
+
+              {isUploaded && advanced && activeSection === 'personal' && (
+                <PersonalPage advanced={advanced} />
+              )}
+            </Stack>
+          </Grid>
+        </Grid>
+      </Container>
+
+      <AnimatePresence>{isDragActive && <DragOverlay />}</AnimatePresence>
+      </MiniDrawer>
+      
+      {/* Media Choice Dialog */}
+      <MediaChoiceDialog
+        open={showMediaDialog}
+        onChoice={handleMediaChoice}
+        fileName={pendingFile?.name}
+      />
+    </Box>
   );
 };
 
 AppContent.propTypes = {
   isDragActive: PropTypes.bool.isRequired,
   handleFileChange: PropTypes.func.isRequired,
+  handleFolderChange: PropTypes.func.isRequired,
   isProcessing: PropTypes.bool.isRequired,
   isUploaded: PropTypes.bool.isRequired,
   notFollowingBack: PropTypes.array.isRequired,
@@ -978,6 +2041,52 @@ AppContent.propTypes = {
   setSearchTerm: PropTypes.func.isRequired,
   filteredUsers: PropTypes.array.isRequired,
   rootRef: PropTypes.object.isRequired,
+  advanced: PropTypes.object,
+  progressText: PropTypes.string,
+  activeSection: PropTypes.string,
+  setActiveSection: PropTypes.func,
+  datasets: PropTypes.array,
+  datasetsLoading: PropTypes.bool,
+  refreshDatasets: PropTypes.func,
+  onLoadDataset: PropTypes.func,
+  onDeleteDataset: PropTypes.func,
+  onRenameDataset: PropTypes.func,
+  showMediaDialog: PropTypes.bool,
+  pendingFile: PropTypes.object,
+  handleMediaChoice: PropTypes.func,
+  includeMediaGlobal: PropTypes.bool,
+  currentDatasetId: PropTypes.string,
+  isNavDisabled: PropTypes.bool,
 };
 
 export default App;
+
+// Small UI helpers
+// StatMini moved to components/common/StatMini.jsx
+
+function RowMini({ primary, secondary }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Typography variant="body2">{primary}</Typography>
+      <Chip size="small" label={secondary} />
+    </Box>
+  );
+}
+RowMini.propTypes = {
+  primary: PropTypes.string.isRequired,
+  secondary: PropTypes.string.isRequired,
+};
+
+// InsightsChart moved to components/charts/InsightsChart.jsx
+
+// Sidebar variants moved to components/sidebar/
+
+//
+
+//
+
+// Section moved to components/common/Section.jsx
+
+// BarChart moved to components/charts/BarChart.jsx
+
+// ActiveAppsList moved to components/apps/ActiveAppsList.jsx
