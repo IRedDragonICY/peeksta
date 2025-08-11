@@ -374,6 +374,17 @@ jobs:
             echo "No build.gradle(.kts) found at $APP_DIR" && ls -la "$APP_DIR" && exit 1
           fi
 
+      - name: Warm-up Tauri (generate gradle settings)
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          TAURI_CLI_NO_SERVER: '1'
+        run: |
+          # Run a debug build to ensure Tauri generates tauri.settings.gradle and related files
+          npx tauri android build --debug --ci | cat || true
+
       - name: Build Android APKs (assembleRelease)
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
