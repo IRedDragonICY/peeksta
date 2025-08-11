@@ -3,11 +3,15 @@ import PropTypes from 'prop-types';
 import { styled, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import MuiDrawer from '@mui/material/Drawer';
+import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import List from '@mui/material/List';
 import CssBaseline from '@mui/material/CssBaseline';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -107,6 +111,7 @@ const STORAGE_KEY = 'peeksta_sidebar_open';
 
 export default function MiniDrawer({ title, renderHeaderActions, activeSection, onSelect, children, isItemDisabled }) {
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [open, setOpen] = React.useState(() => {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
@@ -115,6 +120,7 @@ export default function MiniDrawer({ title, renderHeaderActions, activeSection, 
       return true;
     }
   });
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -132,51 +138,108 @@ export default function MiniDrawer({ title, renderHeaderActions, activeSection, 
     setOpen(false);
   };
 
+  const handleMobileOpen = () => setMobileOpen(true);
+  const handleMobileClose = () => setMobileOpen(false);
+
+  const showLabels = isDesktop ? open : true;
+
+  const drawerList = (
+    <List>
+      {items.map((it) => {
+        const disabled = isItemDisabled?.(it.key) || false;
+        return (
+          <ListItem key={it.key} disablePadding sx={{ display: 'block', opacity: disabled ? 0.5 : 1 }}>
+            <ListItemButton
+              disabled={disabled}
+              onClick={() => {
+                if (disabled) return;
+                onSelect?.(it.key);
+                if (!isDesktop) handleMobileClose();
+              }}
+              sx={[{ minHeight: 48, px: 2.5 }, showLabels ? { justifyContent: 'initial' } : { justifyContent: 'center' }]}
+              selected={activeSection === it.key}
+            >
+              <ListItemIcon sx={[{ minWidth: 0, justifyContent: 'center' }, showLabels ? { mr: 3 } : { mr: 'auto' }]}>
+                {it.icon}
+              </ListItemIcon>
+              <ListItemText primary={it.label} sx={[showLabels ? { opacity: 1 } : { opacity: 0 }]} />
+            </ListItemButton>
+          </ListItem>
+        );
+      })}
+    </List>
+  );
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <Drawer variant="permanent" open={open}>
-        <DrawerHeader>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
-            {!open && (
-              <IconButton onClick={handleDrawerOpen} size="small">
-                <MenuIcon />
+
+      {isDesktop ? (
+        <Drawer variant="permanent" open={open}>
+          <DrawerHeader>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+              {!open && (
+                <IconButton onClick={handleDrawerOpen} size="small" aria-label="open sidebar">
+                  <MenuIcon />
+                </IconButton>
+              )}
+              <Typography variant="h6" noWrap sx={{ fontWeight: 800, opacity: open ? 1 : 0, transition: 'opacity 0.2s' }}>
+                {title}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 0.5 }}>
+              <IconButton onClick={open ? handleDrawerClose : handleDrawerOpen} size="small" aria-label="toggle sidebar">
+                {open ? (theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />) : <MenuIcon />}
               </IconButton>
-            )}
-            <Typography variant="h6" noWrap sx={{ fontWeight: 800, opacity: open ? 1 : 0, transition: 'opacity 0.2s' }}>
-              {title}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 0.5 }}>
-            <IconButton onClick={open ? handleDrawerClose : handleDrawerOpen} size="small">
-              {open ? (theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />) : <MenuIcon />}
-            </IconButton>
-            {renderHeaderActions?.()}
-          </Box>
-        </DrawerHeader>
-        <Divider />
-        <List>
-          {items.map((it) => {
-            const disabled = isItemDisabled?.(it.key) || false;
-            return (
-              <ListItem key={it.key} disablePadding sx={{ display: 'block', opacity: disabled ? 0.5 : 1 }}>
-                <ListItemButton
-                  disabled={disabled}
-                  onClick={() => !disabled && onSelect?.(it.key)}
-                  sx={[{ minHeight: 48, px: 2.5 }, open ? { justifyContent: 'initial' } : { justifyContent: 'center' }]}
-                  selected={activeSection === it.key}
-                >
-                  <ListItemIcon sx={[{ minWidth: 0, justifyContent: 'center' }, open ? { mr: 3 } : { mr: 'auto' }]}>
-                    {it.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={it.label} sx={[open ? { opacity: 1 } : { opacity: 0 }]} />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
-      </Drawer>
+              {renderHeaderActions?.()}
+            </Box>
+          </DrawerHeader>
+          <Divider />
+          {drawerList}
+        </Drawer>
+      ) : (
+        <>
+          <AppBar position="fixed" color="transparent" elevation={0}>
+            <Toolbar sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton edge="start" color="inherit" onClick={handleMobileOpen} aria-label="open navigation menu">
+                  <MenuIcon />
+                </IconButton>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                  {title}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {renderHeaderActions?.()}
+              </Box>
+            </Toolbar>
+          </AppBar>
+
+          <SwipeableDrawer
+            anchor="left"
+            open={mobileOpen}
+            onOpen={handleMobileOpen}
+            onClose={handleMobileClose}
+            disableBackdropTransition={false}
+            ModalProps={{ keepMounted: true }}
+            PaperProps={{ sx: { width: drawerWidth } }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, py: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                {title}
+              </Typography>
+              <IconButton onClick={handleMobileClose} aria-label="close navigation menu">
+                {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              </IconButton>
+            </Box>
+            <Divider />
+            {drawerList}
+          </SwipeableDrawer>
+        </>
+      )}
+
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
+        {!isDesktop && <Toolbar />}
         {children}
       </Box>
     </Box>
