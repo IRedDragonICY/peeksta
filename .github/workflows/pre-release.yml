@@ -341,7 +341,7 @@ jobs:
           RUSTFLAGS: '-C strip=symbols'
         run: |
           # Use Tauri CLI which configures Gradle and avoids abiFilters/splits conflicts
-          npx tauri android build --ci -- --apk --aab --split-per-abi --target aarch64 --target armv7 --target i686 --target x86_64 | cat
+          npx tauri android build --ci --apk --aab --split-per-abi --target aarch64 --target armv7 --target i686 --target x86_64 | cat
 
       - name: Discover version
         run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
