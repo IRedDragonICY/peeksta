@@ -327,8 +327,18 @@ jobs:
           for f in "$APP_DIR/build.gradle" "$APP_DIR/build.gradle.kts"; do
             [ -f "$f" ] || continue
             cp "$f" "$f.bak" || true
-            sed -i -E 's/^(\s*)(abiFilters\b.*)$/\1\/\/ removed by CI: \2/' "$f" || true
-            sed -i -E 's/^(\s*)(abiFilters\s*\+?=\s*listOf\(.*\)\s*)$/\1\/\/ removed by CI: \2/' "$f" || true
+            # Comment out any line containing abiFilters in any style (Groovy/KTS)
+            sed -i -E '/abiFilters/ s/^/\/\/ removed by CI: /' "$f" || true
+            # Also handle multiline list constructs by commenting following lines until closing paren
+            awk 'BEGIN{inblock=0} {
+              if ($0 ~ /abiFilters.*\(/) { inblock=1; print "// removed by CI: "$0; next }
+              if (inblock) {
+                print "// removed by CI: "$0;
+                if ($0 ~ /\)/) inblock=0;
+                next
+              }
+              print $0
+            }' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
           done
 
       - name: Enable ABI splits and shrink (release)
@@ -345,7 +355,7 @@ jobs:
             '      enable true' \
             '      reset()' \
             "      include 'armeabi-v7a','x86_64','x86','arm64-v8a'" \
-            '      universalApk false' \
+            '      universalApk true' \
             '    }' \
             '  }' \
             '  buildTypes {' \
@@ -394,6 +404,10 @@ jobs:
             f="$OUT/apk/$abi/release/app-$abi-release.apk"
             if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
           done
+          # Universal APK if generated (because universalApk true)
+          if [ -f "$OUT/apk/universal/release/app-universal-release.apk" ]; then
+            cp "$OUT/apk/universal/release/app-universal-release.apk" "peeksta-$VER-android-universal.apk"
+          fi
 
       - name: Upload Android artifacts (APK/AAB)
         uses: softprops/action-gh-release@v2
@@ -405,6 +419,7 @@ jobs:
             peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
             peeksta-${{ env.APP_VERSION }}-android-x86.apk
             peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
+            peeksta-${{ env.APP_VERSION }}-android-universal.apk
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
