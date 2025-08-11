@@ -320,23 +320,15 @@ jobs:
         run: |
           test -d src-tauri/gen/android || (ls -la src-tauri/gen || true; echo "Android project missing"; exit 1)
 
-      - name: Enable ABI splits and shrink (release)
+      - name: Enable shrink/minify for release (no splits)
         run: |
           set -e
           APP_DIR=src-tauri/gen/android/app
           # Proguard rules file
           [ -f "$APP_DIR/proguard-rules.pro" ] || printf '%s\n' '# keep rules' > "$APP_DIR/proguard-rules.pro"
-          # Create Groovy DSL injection file (works with both build.gradle and build.gradle.kts via apply from)
+          # Create Groovy DSL injection file (only buildTypes.release tweaks; do NOT enable splits to avoid conflict with ndk.abiFilters)
           printf '%s\n' \
             'android {' \
-            '  splits {' \
-            '    abi {' \
-            '      enable true' \
-            '      reset()' \
-            "      include 'armeabi-v7a','arm64-v8a','x86','x86_64'" \
-            '      universalApk false' \
-            '    }' \
-            '  }' \
             '  buildTypes {' \
             '    release {' \
             '      minifyEnabled true' \
@@ -373,27 +365,25 @@ jobs:
           VER="$APP_VERSION"
           OUT=src-tauri/gen/android/app/build/outputs
           # Universal AAB (release)
-          if [ -f "$OUT/bundle/release/app-release.aab" ]; then
-            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
-          elif [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
+          if [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
             cp "$OUT/bundle/universalRelease/app-universal-release.aab" "peeksta-$VER-android-universal.aab"
+          elif [ -f "$OUT/bundle/release/app-release.aab" ]; then
+            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
           fi
-          # Per-ABI APKs (release)
-          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
-            f="$OUT/apk/$abi/release/app-$abi-release.apk"
-            if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
-          done
+          # Universal APK (release)
+          if [ -f "$OUT/apk/universal/release/app-universal-release.apk" ]; then
+            cp "$OUT/apk/universal/release/app-universal-release.apk" "peeksta-$VER-android-universal.apk"
+          elif [ -f "$OUT/apk/release/app-release.apk" ]; then
+            cp "$OUT/apk/release/app-release.apk" "peeksta-$VER-android-universal.apk"
+          fi
 
       - name: Upload Android artifacts (APK/AAB)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
+            peeksta-${{ env.APP_VERSION }}-android-universal.apk
             peeksta-${{ env.APP_VERSION }}-android-universal.aab
-            peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.apk
-            peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
-            peeksta-${{ env.APP_VERSION }}-android-x86.apk
-            peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
