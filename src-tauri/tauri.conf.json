@@ -5,7 +5,7 @@
   "identifier": "com.ireddragonicy.peeksta",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run tauri:export",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
