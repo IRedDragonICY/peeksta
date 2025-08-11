@@ -351,23 +351,45 @@ jobs:
           set -e
           VER="$APP_VERSION"
           OUT=src-tauri/gen/android/app/build/outputs
-          # Universal AAB (release)
-          if [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
-            cp "$OUT/bundle/universalRelease/app-universal-release.aab" "peeksta-$VER-android-universal.aab"
-          elif [ -f "$OUT/bundle/release/app-release.aab" ]; then
-            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
-          fi
-          # Per-ABI APKs (release)
-          for abi in armeabi-v7a x86_64 x86 arm64-v8a; do
-            f="$OUT/apk/$abi/release/app-$abi-release.apk"
-            if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
+          # Map arch names from Gradle/Tauri to Android ABI naming
+          map_arch() {
+            case "$1" in
+              arm) echo "armeabi-v7a" ;;
+              arm64) echo "arm64-v8a" ;;
+              x86) echo "x86" ;;
+              x86_64) echo "x86_64" ;;
+              *) echo "$1" ;;
+            esac
+          }
+
+          # Per-ABI APKs (release), handle -unsigned suffix
+          for dir in "$OUT"/apk/*/release; do
+            [ -d "$dir" ] || continue
+            arch_dir=$(basename "$(dirname "$dir")")
+            abi=$(map_arch "$arch_dir")
+            apk_path=""
+            # Prefer unsigned release APK; fallback to any release APK
+            if ls "$dir"/app-*-release-unsigned.apk >/dev/null 2>&1; then
+              apk_path=$(ls -1 "$dir"/app-*-release-unsigned.apk | head -n 1)
+            elif ls "$dir"/app-*-release.apk >/dev/null 2>&1; then
+              apk_path=$(ls -1 "$dir"/app-*-release.apk | head -n 1)
+            fi
+            if [ -n "$apk_path" ]; then
+              cp "$apk_path" "peeksta-$VER-android-$abi.apk"
+            fi
           done
-          # Per-ABI AABs (if generated with split-per-abi)
-          for abi in armeabi-v7a x86_64 x86 arm64-v8a; do
-            f="$OUT/bundle/${abi}Release/app-${abi}-release.aab"
-            if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.aab"; fi
+
+          # Per-ABI AABs (release)
+          for dir in "$OUT"/bundle/*Release; do
+            [ -d "$dir" ] || continue
+            name=$(basename "$dir") # e.g., armRelease, arm64Release, x86Release, x86_64Release
+            arch=${name%Release}
+            abi=$(map_arch "$arch")
+            if ls "$dir"/app-*-release.aab >/dev/null 2>&1; then
+              aab_path=$(ls -1 "$dir"/app-*-release.aab | head -n 1)
+              cp "$aab_path" "peeksta-$VER-android-$abi.aab"
+            fi
           done
-          # No universal APK expected (splits only)
 
       - name: Upload Android artifacts (APK/AAB)
         uses: softprops/action-gh-release@v2
@@ -376,13 +398,13 @@ jobs:
           files: |
             peeksta-${{ env.APP_VERSION }}-android-universal.aab
             peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.apk
-            peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
-            peeksta-${{ env.APP_VERSION }}-android-x86.apk
             peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
+            peeksta-${{ env.APP_VERSION }}-android-x86.apk
+            peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
             peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.aab
-            peeksta-${{ env.APP_VERSION }}-android-x86_64.aab
-            peeksta-${{ env.APP_VERSION }}-android-x86.aab
             peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.aab
+            peeksta-${{ env.APP_VERSION }}-android-x86.aab
+            peeksta-${{ env.APP_VERSION }}-android-x86_64.aab
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
