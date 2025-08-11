@@ -291,7 +291,7 @@ jobs:
           rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        run: npm ci
 
       - name: Generate Tauri icons from app logo
         run: |
@@ -345,11 +345,23 @@ jobs:
         run: |
           set -e
           VER="$APP_VERSION"
-          cp src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk peeksta-$VER-android-universal.apk || true
-          cp src-tauri/gen/android/app/build/outputs/bundle/universalDebug/app-universal-debug.aab peeksta-$VER-android-universal.aab || true
+          OUT=src-tauri/gen/android/app/build/outputs
+          # Universal APK (fallback to non-split path if needed)
+          if [ -f "$OUT/apk/universal/debug/app-universal-debug.apk" ]; then
+            cp "$OUT/apk/universal/debug/app-universal-debug.apk" "peeksta-$VER-android-universal.apk"
+          elif [ -f "$OUT/apk/debug/app-debug.apk" ]; then
+            cp "$OUT/apk/debug/app-debug.apk" "peeksta-$VER-android-universal.apk"
+          fi
+          # Universal AAB (fallback path)
+          if [ -f "$OUT/bundle/universalDebug/app-universal-debug.aab" ]; then
+            cp "$OUT/bundle/universalDebug/app-universal-debug.aab" "peeksta-$VER-android-universal.aab"
+          elif [ -f "$OUT/bundle/debug/app-debug.aab" ]; then
+            cp "$OUT/bundle/debug/app-debug.aab" "peeksta-$VER-android-universal.aab"
+          fi
+          # Per-ABI APKs (if splits enabled)
           for abi in armeabi-v7a arm64-v8a x86 x86_64; do
-            f="src-tauri/gen/android/app/build/outputs/apk/$abi/debug/app-$abi-debug.apk"
-            if [ -f "$f" ]; then cp "$f" peeksta-$VER-android-$abi.apk; fi
+            f="$OUT/apk/$abi/debug/app-$abi-debug.apk"
+            if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
           done
 
       - name: Upload Android artifacts (APK/AAB)
