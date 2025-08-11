@@ -355,7 +355,7 @@ jobs:
             '      enable true' \
             '      reset()' \
             "      include 'armeabi-v7a','x86_64','x86','arm64-v8a'" \
-            '      universalApk true' \
+            '      universalApk false' \
             '    }' \
             '  }' \
             '  buildTypes {' \
@@ -374,7 +374,7 @@ jobs:
             echo "No build.gradle(.kts) found at $APP_DIR" && ls -la "$APP_DIR" && exit 1
           fi
 
-      - name: Build Android (release)
+      - name: Build Android APKs (assembleRelease)
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
@@ -383,7 +383,39 @@ jobs:
           TAURI_CLI_NO_SERVER: '1'
           RUSTFLAGS: '-C strip=symbols'
         run: |
-          npx tauri android build --ci
+          # Use Gradle directly to assemble APKs with ABI splits
+          ./src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android assembleRelease | cat
+
+      - name: Disable splits for bundle
+        run: |
+          set -e
+          APP_DIR=src-tauri/gen/android/app
+          # Replace injection with one that disables splits but keeps shrink/minify
+          printf '%s\n' \
+            'android {' \
+            '  splits {' \
+            '    abi {' \
+            '      enable false' \
+            '      universalApk false' \
+            '    }' \
+            '  }' \
+            '  buildTypes {' \
+            '    release {' \
+            '      minifyEnabled true' \
+            '      shrinkResources true' \
+            "      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'" \
+            '    }' \
+            '  }' \
+            '}' > "$APP_DIR/peeksta.inject.gradle"
+
+      - name: Build Android bundle (AAB release)
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          ./src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android bundleRelease | cat
 
       - name: Discover version
         run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
@@ -404,10 +436,7 @@ jobs:
             f="$OUT/apk/$abi/release/app-$abi-release.apk"
             if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
           done
-          # Universal APK if generated (because universalApk true)
-          if [ -f "$OUT/apk/universal/release/app-universal-release.apk" ]; then
-            cp "$OUT/apk/universal/release/app-universal-release.apk" "peeksta-$VER-android-universal.apk"
-          fi
+          # No universal APK expected (splits only)
 
       - name: Upload Android artifacts (APK/AAB)
         uses: softprops/action-gh-release@v2
