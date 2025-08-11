@@ -248,7 +248,7 @@ jobs:
           fail_on_unmatched_files: false
 
   tauri-android:
-    name: Tauri Android (Debug APK)
+    name: Tauri Android (Release APKs)
     needs: prerelease
     runs-on: ubuntu-latest
     steps:
@@ -320,12 +320,47 @@ jobs:
         run: |
           test -d src-tauri/gen/android || (ls -la src-tauri/gen || true; echo "Android project missing"; exit 1)
 
-      - name: Enable ABI splits in Gradle (per-ABI APKs)
+      - name: Enable ABI splits and shrink (release)
         run: |
           set -e
           APP_DIR=src-tauri/gen/android/app
-          if [ -f "$APP_DIR/build.gradle" ]; then
-            echo "afterEvaluate { android.splits.abi.enable true; android.splits.abi.reset(); android.splits.abi.include 'armeabi-v7a','arm64-v8a','x86','x86_64'; android.splits.abi.universalApk false }" >> "$APP_DIR/build.gradle"
+          if [ -f "$APP_DIR/build.gradle.kts" ]; then
+            cat >> "$APP_DIR/build.gradle.kts" <<'GRADLEKTS'
+afterEvaluate {
+  android.splits.abi.isEnable = true
+  android.splits.abi.reset()
+  android.splits.abi.include("armeabi-v7a","arm64-v8a","x86","x86_64")
+  android.splits.abi.isUniversalApk = false
+
+  val release = android.buildTypes.getByName("release")
+  release.isMinifyEnabled = true
+  release.isShrinkResources = true
+  release.proguardFiles(
+    getDefaultProguardFile("proguard-android-optimize.txt"),
+    file("proguard-rules.pro")
+  )
+}
+GRADLEKTS
+            [ -f "$APP_DIR/proguard-rules.pro" ] || echo "# keep rules" > "$APP_DIR/proguard-rules.pro"
+          elif [ -f "$APP_DIR/build.gradle" ]; then
+            cat >> "$APP_DIR/build.gradle" <<'GRADLE'
+afterEvaluate {
+  android.splits.abi.enable true
+  android.splits.abi.reset()
+  android.splits.abi.include 'armeabi-v7a','arm64-v8a','x86','x86_64'
+  android.splits.abi.universalApk false
+
+  def rel = android.buildTypes.findByName('release')
+  if (rel != null) {
+    rel.minifyEnabled true
+    rel.shrinkResources true
+    rel.proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+  }
+}
+GRADLE
+            [ -f "$APP_DIR/proguard-rules.pro" ] || echo "# keep rules" > "$APP_DIR/proguard-rules.pro"
+          else
+            echo "No build.gradle(.kts) found at $APP_DIR" && ls -la "$APP_DIR" && exit 1
           fi
 
       - name: Build Android (release)
