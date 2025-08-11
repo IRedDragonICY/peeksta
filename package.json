@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:export": "vite build",
+    "tauri:android:init": "tauri android init",
+    "tauri:android:build": "tauri android build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,6 +44,7 @@
     "globals": "^15.11.0",
     "prop-types": "^15.8.1",
     "react-hot-toast": "^2.5.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "@tauri-apps/cli": "^2.0.0"
   }
 }

@@ -1,0 +1,366 @@
+name: Pre-Release on Push
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  RELEASE_TAG: pre-${{ github.run_number }}-${{ github.sha }}
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    name: Build and Pre-Release (Vite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build web (Vite)
+        run: npm run build
+
+      - name: Upload web build folder (dist)
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: |
+            dist/**
+            package.json
+            package-lock.json
+            vite.config.js
+
+      - name: Generate changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          SERVER_URL="${GITHUB_SERVER_URL:-https://github.com}"
+          REPO="${GITHUB_REPOSITORY}"
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "## Changes" > release_notes.md
+          if [ -z "$LAST_TAG" ]; then
+            echo "_Initial pre-release; showing last 50 commits._" >> release_notes.md
+            LOG=$(git log --pretty=format:'%h|%s|%an' -n 50)
+          else
+            echo "_Changes since $LAST_TAG._" >> release_notes.md
+            LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:'%h|%s|%an')
+          fi
+          echo "" >> release_notes.md
+
+          gen_section() { # title pattern
+            local TITLE="$1"
+            local PATTERN="$2"
+            local BODY
+            BODY=$(echo "$LOG" | grep -E "\|$PATTERN" || true)
+            if [ -n "$BODY" ]; then
+              echo "### $TITLE" >> release_notes.md
+              echo "$BODY" | while IFS='|' read -r h s a; do echo "- [**$h**](${SERVER_URL}/${REPO}/commit/$h) $s ($a)"; done >> release_notes.md
+              echo "" >> release_notes.md
+            fi
+          }
+
+          gen_section "Features" 'feat(\(|:|!)'
+          gen_section "Fixes" 'fix(\(|:|!)'
+          gen_section "Performance" 'perf(\(|:|!)'
+          gen_section "Docs" 'docs(\(|:|!)'
+          gen_section "Chores" 'chore(\(|:|!)'
+
+          OTHER=$(echo "$LOG" | grep -Ev "\|(feat|fix|perf|docs|chore)(\(|:|!)" || true)
+          if [ -n "$OTHER" ]; then
+            echo "### Others" >> release_notes.md
+            echo "$OTHER" | while IFS='|' read -r h s a; do echo "- [**$h**](${SERVER_URL}/${REPO}/commit/$h) $s ($a)"; done >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+
+      - name: Create/Update Pre-Release (no web zip)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Pre-Release ${{ github.run_number }} (${{ github.sha }})
+          body_path: release_notes.md
+          prerelease: true
+          make_latest: true
+
+  tauri-windows:
+    name: Tauri Windows (x64/x86)
+    needs: prerelease
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Tauri icons from app logo
+        shell: pwsh
+        run: |
+          $src = 'src/assets/logo.png'
+          if (-not (Test-Path $src)) { throw "logo not found at $src" }
+          npx tauri icon $src -o src-tauri/icons | cat
+
+      - name: Build static web (export)
+        run: npm run tauri:export
+
+      - name: Discover version and product name
+        shell: pwsh
+        run: |
+          $json = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
+          echo "APP_VERSION=$($json.version)" >> $Env:GITHUB_ENV
+          echo "PRODUCT_NAME=$($json.productName)" >> $Env:GITHUB_ENV
+
+      - name: Add 32-bit Rust target (if needed)
+        if: matrix.arch == 'x86'
+        run: rustup target add i686-pc-windows-msvc
+
+      - name: Build Tauri (portable + MSI installer if available)
+        run: |
+          if [ "${{ matrix.arch }}" = "x86" ]; then npx tauri build --target i686-pc-windows-msvc; else npm run tauri:build; fi
+        shell: bash
+
+      - name: Rename Windows artifacts
+        shell: pwsh
+        run: |
+          $arch = if ('${{ matrix.arch }}' -eq 'x86') { 'x86' } else { 'x64' }
+          $ver = "$Env:APP_VERSION"
+          $outDir = if ($arch -eq 'x86') { 'src-tauri/target/i686-pc-windows-msvc/release' } else { 'src-tauri/target/release' }
+          $exe = Get-ChildItem -Path $outDir -Filter *.exe | Select-Object -First 1
+          if ($exe) { Copy-Item $exe.FullName "peeksta-$ver-win-$arch.exe" }
+          $msiDir = if ($arch -eq 'x86') { 'src-tauri/target/i686-pc-windows-msvc/release/bundle/msi' } else { 'src-tauri/target/release/bundle/msi' }
+          if (Test-Path $msiDir) {
+            $msi = Get-ChildItem -Path $msiDir -Filter *.msi | Select-Object -First 1
+            if ($msi) { Copy-Item $msi.FullName "peeksta-$ver-win-$arch.msi" }
+          }
+          $nsisDir = if ($arch -eq 'x86') { 'src-tauri/target/i686-pc-windows-msvc/release/bundle/nsis' } else { 'src-tauri/target/release/bundle/nsis' }
+          if (Test-Path $nsisDir) {
+            $nsis = Get-ChildItem -Path $nsisDir -Filter *.exe | Select-Object -First 1
+            if ($nsis) { Copy-Item $nsis.FullName "peeksta-$ver-win-$arch-setup.exe" }
+          }
+
+      - name: Upload Windows artifacts (exe/msi)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            peeksta-${{ env.APP_VERSION }}-win-${{ matrix.arch }}.exe
+            peeksta-${{ env.APP_VERSION }}-win-${{ matrix.arch }}.msi
+            peeksta-${{ env.APP_VERSION }}-win-${{ matrix.arch }}-setup.exe
+          fail_on_unmatched_files: false
+
+  tauri-linux:
+    name: Tauri Linux Portable
+    needs: prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf jq
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Tauri icons from app logo
+        run: |
+          set -e
+          SRC="src/assets/logo.png"
+          if [ ! -f "$SRC" ]; then echo "logo not found at $SRC" && exit 1; fi
+          npx tauri icon "$SRC" -o src-tauri/icons | cat
+
+      - name: Build static web (export)
+        run: npm run tauri:export
+
+      - name: Build Tauri (portable + AppImage + deb if available)
+        run: npm run tauri:build
+
+      - name: Discover version
+        run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
+
+      - name: Rename Linux artifacts
+        run: |
+          set -e
+          VER="$APP_VERSION"
+          BIN="src-tauri/target/release/peeksta"
+          if [ ! -f "$BIN" ]; then BIN=$(ls -1 src-tauri/target/release/* | head -n 1); fi
+          if [ ! -f "$BIN" ]; then echo "Linux binary not found" && ls -la src-tauri/target/release || true && exit 1; fi
+          cp "$BIN" peeksta-$VER-linux-x64
+          for f in src-tauri/target/release/bundle/appimage/*.AppImage; do cp "$f" peeksta-$VER-linux-x64.AppImage || true; done
+          for f in src-tauri/target/release/bundle/deb/*.deb; do cp "$f" peeksta-$VER-linux-amd64.deb || true; done
+
+      - name: Upload Linux artifacts (bin/AppImage/deb)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            peeksta-${{ env.APP_VERSION }}-linux-x64
+            peeksta-${{ env.APP_VERSION }}-linux-x64.AppImage
+            peeksta-${{ env.APP_VERSION }}-linux-amd64.deb
+          fail_on_unmatched_files: false
+
+  tauri-android:
+    name: Tauri Android (Debug APK)
+    needs: prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager --install "platform-tools" "platforms;android-33" "platforms;android-34" "build-tools;34.0.0" "build-tools;33.0.2" "cmake;3.22.1" "ndk;25.1.8937393"
+
+      - name: Set Android env (NDK_HOME, ANDROID_HOME)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          NDK_DIR=$(ls -1d "$ANDROID_SDK_ROOT"/ndk/* | sort -V | tail -n 1)
+          if [ -z "$NDK_DIR" ]; then echo "NDK not found under $ANDROID_SDK_ROOT/ndk" && exit 1; fi
+          echo "NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Android Rust targets
+        run: |
+          rustup target add aarch64-linux-android
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Tauri icons from app logo
+        run: |
+          set -e
+          SRC="src/assets/logo.png"
+          if [ ! -f "$SRC" ]; then echo "logo not found at $SRC" && exit 1; fi
+          npx tauri icon "$SRC" -o src-tauri/icons | cat
+
+      - name: Build static web (export)
+        run: npm run tauri:export
+
+      - name: Clean previous Android project (if any)
+        run: rm -rf src-tauri/gen/android || true
+
+      - name: Init Android project
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: |
+          npx tauri android init --ci
+          test -d src-tauri/gen/android || (echo "Init did not generate project" && exit 1)
+
+      - name: Verify Android project exists
+        run: |
+          test -d src-tauri/gen/android || (ls -la src-tauri/gen || true; echo "Android project missing"; exit 1)
+
+      - name: Enable ABI splits in Gradle (per-ABI APKs)
+        run: |
+          set -e
+          APP_DIR=src-tauri/gen/android/app
+          if [ -f "$APP_DIR/build.gradle" ]; then
+            echo "afterEvaluate { android.splits.abi.enable true; android.splits.abi.reset(); android.splits.abi.include 'armeabi-v7a','arm64-v8a','x86','x86_64'; android.splits.abi.universalApk true }" >> "$APP_DIR/build.gradle"
+          fi
+
+      - name: Build Android (debug)
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          TAURI_CLI_NO_SERVER: '1'
+        run: |
+          npx tauri android build --debug --ci
+
+      - name: Discover version
+        run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
+
+      - name: Rename Android artifacts
+        run: |
+          set -e
+          VER="$APP_VERSION"
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk peeksta-$VER-android-universal.apk || true
+          cp src-tauri/gen/android/app/build/outputs/bundle/universalDebug/app-universal-debug.aab peeksta-$VER-android-universal.aab || true
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            f="src-tauri/gen/android/app/build/outputs/apk/$abi/debug/app-$abi-debug.apk"
+            if [ -f "$f" ]; then cp "$f" peeksta-$VER-android-$abi.apk; fi
+          done
+
+      - name: Upload Android artifacts (APK/AAB)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            peeksta-${{ env.APP_VERSION }}-android-universal.apk
+            peeksta-${{ env.APP_VERSION }}-android-universal.aab
+            peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.apk
+            peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
+            peeksta-${{ env.APP_VERSION }}-android-x86.apk
+            peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
