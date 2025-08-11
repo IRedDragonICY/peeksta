@@ -326,49 +326,47 @@ jobs:
           APP_DIR=src-tauri/gen/android/app
           # Proguard rules file
           [ -f "$APP_DIR/proguard-rules.pro" ] || printf '%s\n' '# keep rules' > "$APP_DIR/proguard-rules.pro"
-          # Create Kotlin DSL injection file
-          cat > "$APP_DIR/peeksta.inject.gradle.kts" <<'KTS'
-android {
-  splits {
-    abi {
-      isEnable = true
-      reset()
-      include("armeabi-v7a","arm64-v8a","x86","x86_64")
-      isUniversalApk = false
-    }
-  }
-  buildTypes {
-    getByName("release") {
-      isMinifyEnabled = true
-      isShrinkResources = true
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
-      )
-    }
-  }
-}
-KTS
+          # Create Kotlin DSL injection file (printf to avoid YAML heredoc parse issues)
+          printf '%s\n' \
+            'android {' \
+            '  splits {' \
+            '    abi {' \
+            '      isEnable = true' \
+            '      reset()' \
+            '      include("armeabi-v7a","arm64-v8a","x86","x86_64")' \
+            '      isUniversalApk = false' \
+            '    }' \
+            '  }' \
+            '  buildTypes {' \
+            '    getByName("release") {' \
+            '      isMinifyEnabled = true' \
+            '      isShrinkResources = true' \
+            '      proguardFiles(' \
+            '        getDefaultProguardFile("proguard-android-optimize.txt"),' \
+            '        "proguard-rules.pro"' \
+            '      )' \
+            '    }' \
+            '  }' \
+            '}' > "$APP_DIR/peeksta.inject.gradle.kts"
           # Create Groovy DSL injection file
-          cat > "$APP_DIR/peeksta.inject.gradle" <<'GROOVY'
-android {
-  splits {
-    abi {
-      enable true
-      reset()
-      include 'armeabi-v7a','arm64-v8a','x86','x86_64'
-      universalApk false
-    }
-  }
-  buildTypes {
-    release {
-      minifyEnabled true
-      shrinkResources true
-      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-    }
-  }
-}
-GROOVY
+          printf '%s\n' \
+            'android {' \
+            '  splits {' \
+            '    abi {' \
+            '      enable true' \
+            '      reset()' \
+            "      include 'armeabi-v7a','arm64-v8a','x86','x86_64'" \
+            '      universalApk false' \
+            '    }' \
+            '  }' \
+            '  buildTypes {' \
+            '    release {' \
+            '      minifyEnabled true' \
+            '      shrinkResources true' \
+            "      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'" \
+            '    }' \
+            '  }' \
+            '}' > "$APP_DIR/peeksta.inject.gradle"
           if [ -f "$APP_DIR/build.gradle.kts" ]; then
             printf '\napply(from = "peeksta.inject.gradle.kts")\n' >> "$APP_DIR/build.gradle.kts"
           elif [ -f "$APP_DIR/build.gradle" ]; then
