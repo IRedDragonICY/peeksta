@@ -5,6 +5,10 @@ description = "Peeksta desktop and mobile app"
 authors = ["ireddragonicy"]
 edition = "2021"
 
+[lib]
+name = "peeksta"
+crate-type = ["staticlib", "cdylib"]
+
 [build-dependencies]
 tauri-build = { version = "2" }
 
