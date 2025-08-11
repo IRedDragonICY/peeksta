@@ -382,8 +382,8 @@ jobs:
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           TAURI_CLI_NO_SERVER: '1'
         run: |
-          # Run a debug build to ensure Tauri generates tauri.settings.gradle and related files
-          npx tauri android build --debug --ci | cat || true
+          # Ensure gradle settings are generated via Tauri init sync
+          npx tauri android init --ci | cat || true
 
       - name: Build Android APKs (assembleRelease)
         env:
