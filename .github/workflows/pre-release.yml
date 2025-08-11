@@ -325,42 +325,37 @@ jobs:
           set -e
           APP_DIR=src-tauri/gen/android/app
           if [ -f "$APP_DIR/build.gradle" ]; then
-            echo "afterEvaluate { android.splits.abi.enable true; android.splits.abi.reset(); android.splits.abi.include 'armeabi-v7a','arm64-v8a','x86','x86_64'; android.splits.abi.universalApk true }" >> "$APP_DIR/build.gradle"
+            echo "afterEvaluate { android.splits.abi.enable true; android.splits.abi.reset(); android.splits.abi.include 'armeabi-v7a','arm64-v8a','x86','x86_64'; android.splits.abi.universalApk false }" >> "$APP_DIR/build.gradle"
           fi
 
-      - name: Build Android (debug)
+      - name: Build Android (release)
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           NDK_HOME: ${{ env.NDK_HOME }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           TAURI_CLI_NO_SERVER: '1'
+          RUSTFLAGS: '-C strip=symbols'
         run: |
-          npx tauri android build --debug --ci
+          npx tauri android build --ci
 
       - name: Discover version
         run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
 
-      - name: Rename Android artifacts
+      - name: Rename Android artifacts (release)
         run: |
           set -e
           VER="$APP_VERSION"
           OUT=src-tauri/gen/android/app/build/outputs
-          # Universal APK (fallback to non-split path if needed)
-          if [ -f "$OUT/apk/universal/debug/app-universal-debug.apk" ]; then
-            cp "$OUT/apk/universal/debug/app-universal-debug.apk" "peeksta-$VER-android-universal.apk"
-          elif [ -f "$OUT/apk/debug/app-debug.apk" ]; then
-            cp "$OUT/apk/debug/app-debug.apk" "peeksta-$VER-android-universal.apk"
+          # Universal AAB (release)
+          if [ -f "$OUT/bundle/release/app-release.aab" ]; then
+            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
+          elif [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
+            cp "$OUT/bundle/universalRelease/app-universal-release.aab" "peeksta-$VER-android-universal.aab"
           fi
-          # Universal AAB (fallback path)
-          if [ -f "$OUT/bundle/universalDebug/app-universal-debug.aab" ]; then
-            cp "$OUT/bundle/universalDebug/app-universal-debug.aab" "peeksta-$VER-android-universal.aab"
-          elif [ -f "$OUT/bundle/debug/app-debug.aab" ]; then
-            cp "$OUT/bundle/debug/app-debug.aab" "peeksta-$VER-android-universal.aab"
-          fi
-          # Per-ABI APKs (if splits enabled)
+          # Per-ABI APKs (release)
           for abi in armeabi-v7a arm64-v8a x86 x86_64; do
-            f="$OUT/apk/$abi/debug/app-$abi-debug.apk"
+            f="$OUT/apk/$abi/release/app-$abi-release.apk"
             if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
           done
 
@@ -369,7 +364,6 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
-            peeksta-${{ env.APP_VERSION }}-android-universal.apk
             peeksta-${{ env.APP_VERSION }}-android-universal.aab
             peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.apk
             peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
