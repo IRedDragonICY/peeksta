@@ -320,60 +320,6 @@ jobs:
         run: |
           test -d src-tauri/gen/android || (ls -la src-tauri/gen || true; echo "Android project missing"; exit 1)
 
-      - name: Remove ndk.abiFilters (allow splits)
-        run: |
-          set -e
-          APP_DIR=src-tauri/gen/android/app
-          for f in "$APP_DIR/build.gradle" "$APP_DIR/build.gradle.kts"; do
-            [ -f "$f" ] || continue
-            cp "$f" "$f.bak" || true
-            # Comment out any line containing abiFilters in any style (Groovy/KTS)
-            sed -i -E '/abiFilters/ s/^/\/\/ removed by CI: /' "$f" || true
-            # Also handle multiline list constructs by commenting following lines until closing paren
-            awk 'BEGIN{inblock=0} {
-              if ($0 ~ /abiFilters.*\(/) { inblock=1; print "// removed by CI: "$0; next }
-              if (inblock) {
-                print "// removed by CI: "$0;
-                if ($0 ~ /\)/) inblock=0;
-                next
-              }
-              print $0
-            }' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
-          done
-
-      - name: Enable ABI splits and shrink (release)
-        run: |
-          set -e
-          APP_DIR=src-tauri/gen/android/app
-          # Proguard rules file
-          [ -f "$APP_DIR/proguard-rules.pro" ] || printf '%s\n' '# keep rules' > "$APP_DIR/proguard-rules.pro"
-          # Create Groovy DSL injection file with ABI splits + release shrink/minify
-          printf '%s\n' \
-            'android {' \
-            '  splits {' \
-            '    abi {' \
-            '      enable true' \
-            '      reset()' \
-            "      include 'armeabi-v7a','x86_64','x86','arm64-v8a'" \
-            '      universalApk false' \
-            '    }' \
-            '  }' \
-            '  buildTypes {' \
-            '    release {' \
-            '      minifyEnabled true' \
-            '      shrinkResources true' \
-            "      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'" \
-            '    }' \
-            '  }' \
-            '}' > "$APP_DIR/peeksta.inject.gradle"
-          if [ -f "$APP_DIR/build.gradle.kts" ]; then
-            printf '\napply(from = "peeksta.inject.gradle")\n' >> "$APP_DIR/build.gradle.kts"
-          elif [ -f "$APP_DIR/build.gradle" ]; then
-            printf '\napply from: "peeksta.inject.gradle"\n' >> "$APP_DIR/build.gradle"
-          else
-            echo "No build.gradle(.kts) found at $APP_DIR" && ls -la "$APP_DIR" && exit 1
-          fi
-
       - name: Warm-up Tauri (generate gradle settings)
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
@@ -385,7 +331,7 @@ jobs:
           # Ensure gradle settings are generated via Tauri init sync
           npx tauri android init --ci | cat || true
 
-      - name: Build Android APKs (assembleRelease)
+      - name: Build Android (Tauri) — per-ABI APKs + AAB
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
@@ -394,39 +340,8 @@ jobs:
           TAURI_CLI_NO_SERVER: '1'
           RUSTFLAGS: '-C strip=symbols'
         run: |
-          # Use Gradle directly to assemble APKs with ABI splits
-          ./src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android assembleRelease | cat
-
-      - name: Disable splits for bundle
-        run: |
-          set -e
-          APP_DIR=src-tauri/gen/android/app
-          # Replace injection with one that disables splits but keeps shrink/minify
-          printf '%s\n' \
-            'android {' \
-            '  splits {' \
-            '    abi {' \
-            '      enable false' \
-            '      universalApk false' \
-            '    }' \
-            '  }' \
-            '  buildTypes {' \
-            '    release {' \
-            '      minifyEnabled true' \
-            '      shrinkResources true' \
-            "      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'" \
-            '    }' \
-            '  }' \
-            '}' > "$APP_DIR/peeksta.inject.gradle"
-
-      - name: Build Android bundle (AAB release)
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
-          NDK_HOME: ${{ env.NDK_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-        run: |
-          ./src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android bundleRelease | cat
+          # Use Tauri CLI which configures Gradle and avoids abiFilters/splits conflicts
+          npx tauri android build --ci -- --apk --aab --split-per-abi --target aarch64 --target armv7 --target i686 --target x86_64 | cat
 
       - name: Discover version
         run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> $GITHUB_ENV
@@ -437,15 +352,20 @@ jobs:
           VER="$APP_VERSION"
           OUT=src-tauri/gen/android/app/build/outputs
           # Universal AAB (release)
-          if [ -f "$OUT/bundle/release/app-release.aab" ]; then
-            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
-          elif [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
+          if [ -f "$OUT/bundle/universalRelease/app-universal-release.aab" ]; then
             cp "$OUT/bundle/universalRelease/app-universal-release.aab" "peeksta-$VER-android-universal.aab"
+          elif [ -f "$OUT/bundle/release/app-release.aab" ]; then
+            cp "$OUT/bundle/release/app-release.aab" "peeksta-$VER-android-universal.aab"
           fi
           # Per-ABI APKs (release)
           for abi in armeabi-v7a x86_64 x86 arm64-v8a; do
             f="$OUT/apk/$abi/release/app-$abi-release.apk"
             if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.apk"; fi
+          done
+          # Per-ABI AABs (if generated with split-per-abi)
+          for abi in armeabi-v7a x86_64 x86 arm64-v8a; do
+            f="$OUT/bundle/${abi}Release/app-${abi}-release.aab"
+            if [ -f "$f" ]; then cp "$f" "peeksta-$VER-android-$abi.aab"; fi
           done
           # No universal APK expected (splits only)
 
@@ -459,7 +379,10 @@ jobs:
             peeksta-${{ env.APP_VERSION }}-android-x86_64.apk
             peeksta-${{ env.APP_VERSION }}-android-x86.apk
             peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.apk
-            peeksta-${{ env.APP_VERSION }}-android-universal.apk
+            peeksta-${{ env.APP_VERSION }}-android-armeabi-v7a.aab
+            peeksta-${{ env.APP_VERSION }}-android-x86_64.aab
+            peeksta-${{ env.APP_VERSION }}-android-x86.aab
+            peeksta-${{ env.APP_VERSION }}-android-arm64-v8a.aab
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
