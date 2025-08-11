@@ -1,16 +1,20 @@
-# Peeksta - Instagram Follower Analysis Tool
+<div align="center">
 
-Peeksta is a simple web application that helps you analyze your Instagram followers and following lists to identify who is not following you back. It allows you to upload your Instagram data in a ZIP file, and then provides a searchable list of users who are not reciprocating your follow.
+# Peeksta
 
-## Features
+Privacy-first Instagram data explorer and insights dashboard. Import your official Instagram export and analyze your activity, ads, connections, messages, security, and more — 100% offline.
 
--   **Upload Instagram Data:** Accepts a ZIP file containing your Instagram followers and following data in JSON format.
--   **Follower Analysis:** Processes the data to identify users who are not following you back.
--   **Searchable User List:** Presents a list of users who are not following back, with a search bar to easily filter the list.
--   **Direct Instagram Profile Links:** Each username in the list links directly to their Instagram profile for easy access.
--   **Dark Mode Support:** Automatically adjusts to your system's color scheme for a comfortable viewing experience.
--   **Drag and Drop Upload:** Enhanced user experience for uploading files with drag and drop functionality and a visual overlay.
--   **Responsive Design:**  Works well across different screen sizes.
+[![Build & Pre-Release](https://github.com/IRedDragonICY/peeksta/actions/workflows/pre-release.yml/badge.svg)](https://github.com/IRedDragonICY/peeksta/actions/workflows/pre-release.yml)
+
+</div>
+
+## Highlights
+
+- **Offline by design**: Your export stays on your machine. No servers, no external uploads.
+- **Rich analysis**: Ads topics, active apps, connections, insights, link history, messages, security events, and more.
+- **Beautiful UI**: Built with React + Vite + Material UI, with interactive charts (ECharts/Recharts).
+- **Multi-platform**: Desktop (Windows/Linux) and Android builds via Tauri.
+- **One-click releases**: CI builds per-ABI APKs and desktop installers, and drafts a pre-release with changelog.
 
 ## Getting Started
 
@@ -18,15 +22,14 @@ Follow these instructions to get the application running on your local machine:
 
 ### Prerequisites
 
--   [Node.js](https://nodejs.org/) (v16 or higher)
--   [npm](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/)
+- Node.js 20+
 
 ### Installation
 
 1. **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/peeksta.git
+    git clone https://github.com/IRedDragonICY/peeksta.git
     cd peeksta
     ```
 
@@ -34,8 +37,6 @@ Follow these instructions to get the application running on your local machine:
 
     ```bash
     npm install
-    # or
-    yarn install
     ```
 
 ### Running the Application
@@ -44,53 +45,90 @@ Follow these instructions to get the application running on your local machine:
 
     ```bash
     npm run dev
-    # or
-    yarn dev
     ```
 
 2. **Open your browser:**
 
    Visit [http://localhost:5173](http://localhost:5173) (or the port specified in the console) to view the application.
 
-### How to Use
+## Importing Your Instagram Data
 
-1. **Download Your Instagram Data:**
-    -   Visit the [Instagram Data Download](https://accountscenter.instagram.com/info_and_permissions/dyi/) page.
-    -   Request a download of your data in JSON format. You will receive a ZIP file.
-2. **Upload Your ZIP File:**
-    -   Drag and drop the ZIP file into the designated area on the Peeksta website.
-    -   Alternatively, click the upload area and select the ZIP file from your computer.
-3. **Analyze Your Followers:**
-    -   Once the file is uploaded and processed, Peeksta will display a list of users who are not following you back.
-    -   Use the search bar to quickly find specific users.
-    -   Click on a username to view their Instagram profile directly.
+1. Request your data at Instagram Accounts Center → Download your information.
+2. Choose JSON format. You will receive a ZIP.
+3. In Peeksta, open the Datasets manager and drop the ZIP or extracted directory. Parsing runs locally.
 
 ## Project Structure
 
-The project is organized into the following directories and files:
+Key directories:
 
--   `src/`: Contains the source code for the application.
-    -   `components/`: React components for different parts of the UI.
-    -   `hooks/`: Custom React hooks for logic reusability.
-    -   `styles/`: Styled components and global styles for the application.
-    -   `App.jsx`: Main application component.
-    -   `main.jsx`: Entry point of the application.
--   `public/`: Static assets.
-    -   `assets/`: Images and other assets.
--   `index.html`: Main HTML file.
--   `package.json`: Project dependencies and scripts.
+- `src/`
+  - `pages/`: Top-level routes (Overview, Ads, Apps, Connections, Insights, Link History, Logged Information, Messages, Personal, Preferences, Security, Threads).
+  - `components/`: Reusable UI and visualization components (charts, panels, tables, layout, sidebar).
+  - `ig/`: Instagram data pipeline:
+    - `ingestion/`: ZIP and directory ingestion
+    - `parsers/`: Activity, ads, connections, insights, logged info, messages, profile, security
+    - `analysis.js`: Higher-level analysis helpers
+    - `utils/`: file and data utilities
+  - `storage/`: Client-side dataset management
+  - `materialTheme.js` / `theme/`: Theming
 
-## Technologies Used
+- `src-tauri/`
+  - Tauri v2 configuration (`tauri.conf.json`), Rust crate (`Cargo.toml`, `src/`), and build script.
 
--   [React](https://reactjs.org/)
--   [Vite](https://vitejs.dev/)
--   [Styled Components](https://styled-components.com/)
--   [JSZip](https://stuk.github.io/jszip/)
+## Technologies
+
+- React 18 + Vite 6
+- Material UI, Emotion, Styled Components
+- ECharts, Recharts
+- JSZip
+- Tauri v2 (desktop + Android)
+
+## Desktop & Android
+
+Peeksta ships as a Tauri app. Typical local flows:
+
+Desktop (Windows/Linux):
+```bash
+npm run tauri:dev      # dev
+npm run tauri:build    # production build
+```
+
+Android (debug for local testing):
+```bash
+npm run tauri:android:init
+npm run tauri android build -- --apk --split-per-abi
+```
+
+Notes:
+- You need Rust stable and the platform toolchains required by Tauri.
+- For Android: Java 17, Android SDK, and NDK.
+- Artifacts produced locally are unsigned; sign before distribution.
+
+## CI/CD
+
+On every push to `main` (or manual dispatch):
+- Builds the web app and creates a GitHub pre-release with autogenerated changelog.
+- Builds desktop apps: Windows (portable EXE + NSIS/MSI) and Linux (binary, AppImage, Debian package).
+- Builds Android artifacts with per-ABI splits (APKs and AABs) and a universal AAB.
+
+Artifacts are named like:
+- `peeksta-<version>-android-<abi>.apk`
+- `peeksta-<version>-android-<abi>.aab`
+- `peeksta-<version>-win-x64.exe`, `peeksta-<version>-win-x64-setup.exe`
+- `peeksta-<version>-linux-x64`, `.AppImage`, `.deb`
+
+## Privacy & Security
+
+- All parsing and analysis are local-first. Peeksta does not transmit your data to any server.
+- When using packaged apps, data remains on your device; remove datasets anytime from the UI.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
+Pull requests are welcome. Please:
+- Keep PRs focused and well-described; link issues when applicable.
+- Use conventional commits where practical (feat, fix, perf, docs, chore).
+- Run lint/build locally before submitting.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT © Peeksta contributors
