@@ -98,40 +98,32 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
 
       {/* Header */}
       <Box sx={{
-        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
         bgcolor: 'background.paper',
+        boxShadow: (theme) => `0 1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
       }}>
         <Box sx={{
-          maxWidth: 1200,
+          maxWidth: 1400,
           mx: 'auto',
-          p: 3,
+          px: 4,
+          py: 3,
         }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2} sx={{ mb: 2 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={3} sx={{ mb: 3 }}>
             <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{
-              p: 2,
-              borderRadius: 2,
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <FolderZipIcon sx={{ color: 'primary.contrastText', fontSize: 32 }} />
-            </Box>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.5px', mb: 0.5 }}>
-                Datasets
-              </Typography>
-              {!!datasets?.length && (
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {datasets.length} {datasets.length === 1 ? 'dataset' : 'datasets'} saved
+              <FolderZipIcon sx={{ color: 'primary.main', fontSize: 40 }} />
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.5px', mb: 0 }}>
+                  Datasets
                 </Typography>
-              )}
-            </Box>
-          </Stack>
+                {!!datasets?.length && (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5 }}>
+                    {datasets.length} {datasets.length === 1 ? 'dataset' : 'datasets'} saved
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
           <Stack direction="row" spacing={1.5}>
             <Button
-              variant="outlined"
+              variant="text"
               size="large"
               startIcon={<CreateNewFolderIcon />}
               onClick={() => folderInputRef.current?.click()}
@@ -140,7 +132,12 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600,
-                px: 3,
+                px: 2.5,
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  color: 'text.primary',
+                }
               }}
             >
               Folder
@@ -148,7 +145,6 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             <Button
               variant="contained"
               size="large"
-              color="success"
               startIcon={<AddIcon />}
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing || loading}
@@ -156,26 +152,29 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 600,
-                px: 4,
+                px: 3,
+                boxShadow: 'none',
+                '&:hover': {
+                  boxShadow: 'none',
+                }
               }}
             >
               Add ZIP
             </Button>
-            <Button
-              variant="contained"
+            <IconButton
               size="large"
-              startIcon={<RefreshIcon />}
               onClick={onRefresh}
               disabled={loading || isProcessing}
               sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 4,
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  color: 'text.primary',
+                }
               }}
             >
-              Refresh
-            </Button>
+              <RefreshIcon />
+            </IconButton>
           </Stack>
         </Stack>
 
@@ -188,13 +187,24 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
           fullWidth
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
+              borderRadius: 3,
+              bgcolor: 'background.default',
+              '& fieldset': {
+                border: 'none',
+              },
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+              '&.Mui-focused': {
+                bgcolor: 'background.default',
+                boxShadow: (theme) => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+              }
             }
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <FilterListIcon sx={{ color: 'primary.main' }} />
+                <FilterListIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             )
           }}
@@ -223,9 +233,10 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
         }
       }}>
         <Box sx={{
-          maxWidth: 1200,
+          maxWidth: 1400,
           mx: 'auto',
-          p: 3,
+          px: 4,
+          py: 3,
         }}>
           <List disablePadding>
         {filtered.map((d, index) => (
@@ -234,34 +245,31 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             onClick={() => onLoad?.(d.id)}
             selected={currentId === d.id}
             sx={{
-              mb: 1,
-              borderRadius: 2,
-              border: (theme) => currentId === d.id
-                ? `2px solid ${theme.palette.primary.main}`
-                : `1px solid ${theme.palette.divider}`,
+              mb: 0,
+              borderRadius: 3,
               bgcolor: (theme) => currentId === d.id
-                ? alpha(theme.palette.primary.main, 0.08)
-                : 'background.default',
+                ? alpha(theme.palette.primary.main, 0.12)
+                : 'transparent',
               transition: 'all 0.2s',
               '&:hover': {
                 bgcolor: (theme) => currentId === d.id
-                  ? alpha(theme.palette.primary.main, 0.12)
-                  : 'action.hover',
-                borderColor: 'primary.main',
+                  ? alpha(theme.palette.primary.main, 0.16)
+                  : alpha(theme.palette.action.hover, 0.6),
               },
-              py: 2.5,
-              px: 2.5,
+              py: 3,
+              px: 3,
+              borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.05)}`,
             }}
           >
-            <ListItemAvatar sx={{ minWidth: 64 }}>
+            <ListItemAvatar sx={{ minWidth: 72 }}>
               <Avatar
                 sx={{
-                  width: 56,
-                  height: 56,
-                  bgcolor: currentId === d.id ? 'primary.main' : 'primary.light',
-                  color: 'primary.contrastText',
-                  fontWeight: 700,
-                  fontSize: '1.5rem',
+                  width: 64,
+                  height: 64,
+                  bgcolor: (theme) => currentId === d.id ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.12),
+                  color: currentId === d.id ? 'primary.contrastText' : 'primary.main',
+                  fontWeight: 800,
+                  fontSize: '1.75rem',
                 }}
               >
                 {(d.name || d.fileName || 'D')[0].toUpperCase()}
@@ -270,30 +278,35 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             <ListItemText
               primary={
                 <Box component="div">
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 1 }}>
-                    <Typography variant="h6" component="span" sx={{ fontWeight: 700 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" sx={{ mb: 0.5 }}>
+                    <Typography variant="h6" component="span" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
                       {d.name || d.fileName || d.id}
                     </Typography>
                     {d.username && (
                       <Chip
-                        size="medium"
+                        size="small"
                         label={`@${d.username}`}
                         sx={{
                           fontWeight: 600,
-                          bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
+                          height: 24,
+                          bgcolor: (theme) => alpha(theme.palette.info.main, 0.08),
                           color: 'info.main',
-                          borderRadius: 1.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
                         }}
                       />
                     )}
                     {currentId === d.id && (
                       <Chip
-                        size="medium"
+                        size="small"
                         label="Active"
-                        color="success"
                         sx={{
                           fontWeight: 700,
-                          borderRadius: 1.5,
+                          height: 24,
+                          bgcolor: (theme) => alpha(theme.palette.success.main, 0.12),
+                          color: 'success.main',
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
                         }}
                       />
                     )}
@@ -301,60 +314,75 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 </Box>
               }
               secondary={
-                <Box component="div" sx={{ mt: 0.5 }}>
+                <Box component="div" sx={{ mt: 1 }}>
                   <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     {d.type && (
-                      <Chip
-                        size="small"
-                        label={d.type.toUpperCase()}
-                        variant="outlined"
-                        sx={{
-                          height: 24,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          borderRadius: 1.5,
-                        }}
-                      />
+                      <Typography variant="caption" component="span" sx={{
+                        color: 'text.secondary',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}>
+                        {d.type}
+                      </Typography>
                     )}
                     <Typography variant="body2" component="span" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {formatSize(d.size)}
                     </Typography>
                     {d.lastUsedAt && (
                       <Typography variant="body2" component="span" color="text.secondary">
-                        Used {new Date(d.lastUsedAt).toLocaleDateString()}
+                        • Used {new Date(d.lastUsedAt).toLocaleDateString()}
                       </Typography>
                     )}
                   </Stack>
                 </Box>
               }
             />
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={0.5}>
               <Tooltip title="Load Dataset" arrow>
                 <IconButton
-                  size="medium"
-                  color="primary"
+                  size="large"
                   onClick={(e) => { e.stopPropagation(); onLoad?.(d.id); }}
+                  sx={{
+                    color: 'primary.main',
+                    '&:hover': {
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                    }
+                  }}
                 >
                   <PlayArrowIcon />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Rename" arrow>
                 <IconButton
-                  size="medium"
-                  color="info"
+                  size="large"
                   onClick={(e) => { e.stopPropagation(); handleRename(d.id, d.name); }}
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: 'text.primary',
+                      bgcolor: 'action.hover',
+                    }
+                  }}
                 >
                   <EditIcon />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Delete" arrow>
                 <IconButton
-                  size="medium"
-                  color="error"
+                  size="large"
                   onClick={async (e) => {
                     e.stopPropagation();
                     const ok = window.confirm('Delete this dataset?');
                     if (ok) { await onDelete?.(d.id); await onRefresh?.(); }
+                  }}
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: 'error.main',
+                      bgcolor: (theme) => alpha(theme.palette.error.main, 0.08),
+                    }
                   }}
                 >
                   <DeleteIcon />
@@ -365,19 +393,16 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
         ))}
           {!filtered.length && (
             <Box sx={{
-              p: 8,
+              py: 12,
+              px: 4,
               textAlign: 'center',
-              borderRadius: 2,
-              border: (theme) => `2px dashed ${theme.palette.divider}`,
-              bgcolor: 'background.default',
-              my: 4,
             }}>
-              <FolderZipIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 3 }} />
-              <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 700, mb: 1 }}>
+              <FolderZipIcon sx={{ fontSize: 96, color: 'text.disabled', mb: 3, opacity: 0.3 }} />
+              <Typography variant="h4" color="text.primary" sx={{ fontWeight: 700, mb: 1 }}>
                 No datasets yet
               </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Upload a ZIP file to create your first dataset
+              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                Upload a ZIP file or folder to get started
               </Typography>
             </Box>
           )}
