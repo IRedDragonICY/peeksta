@@ -817,108 +817,100 @@ const AppContent = ({
         isItemDisabled={(key) => isNavDisabled && !['overview', 'datasets'].includes(key)}
       >
 
-      <Container
-        maxWidth={activeSection === 'datasets' ? false : 'lg'}
-        disableGutters={activeSection === 'datasets'}
+      <Box
         sx={{
-          py: activeSection === 'datasets' ? 0 : { xs: 3, md: 6 },
-          px: activeSection === 'datasets' ? 0 : undefined,
-          '& .MuiPaper-root:empty': { display: 'none' },
           height: activeSection === 'datasets' ? '100vh' : 'auto',
-          display: activeSection === 'datasets' ? 'flex' : 'block',
-          alignItems: activeSection === 'datasets' ? 'stretch' : undefined,
+          overflow: activeSection === 'datasets' ? 'hidden' : 'visible',
         }}
         ref={rootRef}
       >
-        <Grid container spacing={activeSection === 'datasets' ? 0 : 3} sx={{
-          height: activeSection === 'datasets' ? '100%' : 'auto',
-          width: '100%',
-        }}>
-          {activeSection !== 'datasets' && (
-            <Grid item xs={12}>
-              <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
+        {activeSection === 'datasets' ? (
+          <DatasetsManager
+            datasets={datasets}
+            loading={datasetsLoading}
+            onRefresh={refreshDatasets}
+            onLoad={onLoadDataset}
+            onDelete={onDeleteDataset}
+            onRename={onRenameDataset}
+            currentId={currentDatasetId}
+            onFileChange={handleFileChange}
+            onFolderChange={handleFolderChange}
+            isProcessing={isProcessing}
+          />
+        ) : (
+          <Container
+            maxWidth="lg"
+            sx={{
+              py: { xs: 3, md: 6 },
+              '& .MuiPaper-root:empty': { display: 'none' },
+            }}
+          >
+            <Grid container spacing={3}>
               {!isUploaded && (
-                  <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
-                )}
-              {!!progressText && !isUploaded && (
-                <Typography variant="caption" color="text.secondary">{progressText}</Typography>
+                <Grid item xs={12}>
+                  <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
+                    <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
+                    {!!progressText && (
+                      <Typography variant="caption" color="text.secondary">{progressText}</Typography>
+                    )}
+                  </Paper>
+                </Grid>
               )}
-              </Paper>
+              <Grid item xs={12} md={5}>
+                <Stack spacing={3}>
+                  {isUploaded && advanced && activeSection === 'overview' && (
+                    <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'connections' && (
+                    <ConnectionsPage advanced={advanced} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'messages' && (
+                    <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'link-history' && (
+                    <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'logged-information' && (
+                    <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'ads' && (
+                    <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'apps' && (
+                    <AppsPage advanced={advanced} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'insights' && (
+                    <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'threads' && (
+                    <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'preferences' && (
+                    <PreferencesPage advanced={advanced} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'security' && (
+                    <SecurityPage advanced={advanced} />
+                  )}
+
+                  {isUploaded && advanced && activeSection === 'personal' && (
+                    <PersonalPage advanced={advanced} />
+                  )}
+                </Stack>
+              </Grid>
             </Grid>
-          )}
-          <Grid item xs={12} md={activeSection === 'datasets' ? 12 : 5} sx={{
-            height: activeSection === 'datasets' ? '100%' : 'auto',
-            display: activeSection === 'datasets' ? 'flex' : 'block',
-          }}>
-            <Stack spacing={activeSection === 'datasets' ? 0 : 3} sx={{
-              height: '100%',
-              width: '100%',
-            }}>
-              {activeSection === 'datasets' && (
-                <DatasetsManager
-                  datasets={datasets}
-                  loading={datasetsLoading}
-                  onRefresh={refreshDatasets}
-                  onLoad={onLoadDataset}
-                  onDelete={onDeleteDataset}
-                  onRename={onRenameDataset}
-                  currentId={currentDatasetId}
-                  onFileChange={handleFileChange}
-                  onFolderChange={handleFolderChange}
-                  isProcessing={isProcessing}
-                />
-              )}
-              {isUploaded && advanced && activeSection === 'overview' && (
-                <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'connections' && (
-                <ConnectionsPage advanced={advanced} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'messages' && (
-                <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'link-history' && (
-                <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'logged-information' && (
-                <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'ads' && (
-                <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'apps' && (
-                <AppsPage advanced={advanced} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'insights' && (
-                <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'threads' && (
-                <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'preferences' && (
-                <PreferencesPage advanced={advanced} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'security' && (
-                <SecurityPage advanced={advanced} />
-              )}
-
-              {isUploaded && advanced && activeSection === 'personal' && (
-                <PersonalPage advanced={advanced} />
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-      </Container>
+          </Container>
+        )}
+      </Box>
 
       <AnimatePresence>{isDragActive && <DragOverlay />}</AnimatePresence>
       </MiniDrawer>
