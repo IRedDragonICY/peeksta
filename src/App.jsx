@@ -818,14 +818,17 @@ const AppContent = ({
       >
 
       <Container
-        maxWidth="lg"
+        maxWidth={activeSection === 'datasets' ? false : 'lg'}
+        disableGutters={activeSection === 'datasets'}
         sx={{
-          py: { xs: 3, md: 6 },
+          py: activeSection === 'datasets' ? 0 : { xs: 3, md: 6 },
+          px: activeSection === 'datasets' ? 0 : undefined,
           '& .MuiPaper-root:empty': { display: 'none' },
+          height: activeSection === 'datasets' ? 'calc(100vh - 64px)' : 'auto',
         }}
         ref={rootRef}
       >
-        <Grid container spacing={3}>
+        <Grid container spacing={activeSection === 'datasets' ? 0 : 3}>
           {activeSection !== 'datasets' && (
             <Grid item xs={12}>
               <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
@@ -838,8 +841,8 @@ const AppContent = ({
               </Paper>
             </Grid>
           )}
-          <Grid item xs={12} md={5}>
-            <Stack spacing={3}>
+          <Grid item xs={12} md={activeSection === 'datasets' ? 12 : 5}>
+            <Stack spacing={activeSection === 'datasets' ? 0 : 3} sx={{ height: '100%' }}>
               {activeSection === 'datasets' && (
                 <DatasetsManager
                   datasets={datasets}
