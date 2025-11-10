@@ -65,17 +65,13 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
   };
 
   return (
-    <Paper
-      elevation={0}
+    <Box
       sx={{
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 0,
         bgcolor: 'background.default',
         width: '100%',
-        maxWidth: '100%',
-        mx: 'auto',
       }}
     >
       {/* Hidden file inputs */}
@@ -99,15 +95,11 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
       {/* Header */}
       <Box sx={{
         bgcolor: 'background.paper',
-        boxShadow: (theme) => `0 1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
+        borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        px: { xs: 3, md: 6 },
+        py: { xs: 2.5, md: 3 },
       }}>
-        <Box sx={{
-          maxWidth: 1400,
-          mx: 'auto',
-          px: 4,
-          py: 3,
-        }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={3} sx={{ mb: 3 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2} sx={{ mb: 2.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <FolderZipIcon sx={{ color: 'primary.main', fontSize: 40 }} />
               <Box>
@@ -188,88 +180,83 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 3,
-              bgcolor: 'background.default',
+              bgcolor: (theme) => alpha(theme.palette.action.hover, 0.3),
               '& fieldset': {
                 border: 'none',
               },
               '&:hover': {
-                bgcolor: 'action.hover',
+                bgcolor: (theme) => alpha(theme.palette.action.hover, 0.5),
               },
               '&.Mui-focused': {
-                bgcolor: 'background.default',
-                boxShadow: (theme) => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                bgcolor: 'background.paper',
+                boxShadow: (theme) => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.15)}`,
               }
             }
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <FilterListIcon sx={{ color: 'text.secondary' }} />
+                <FilterListIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
               </InputAdornment>
             )
           }}
         />
-      </Box>
       </Box>
 
       {/* List */}
       <Box sx={{
         flex: 1,
         overflow: 'auto',
-        bgcolor: 'background.paper',
+        bgcolor: 'background.default',
+        px: { xs: 3, md: 6 },
+        py: 2,
         '&::-webkit-scrollbar': {
-          width: '12px',
+          width: '10px',
         },
         '&::-webkit-scrollbar-track': {
           bgcolor: 'transparent',
         },
         '&::-webkit-scrollbar-thumb': {
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2),
+          bgcolor: (theme) => alpha(theme.palette.text.secondary, 0.2),
           borderRadius: 2,
-          border: (theme) => `3px solid ${theme.palette.background.paper}`,
           '&:hover': {
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.3),
+            bgcolor: (theme) => alpha(theme.palette.text.secondary, 0.3),
           }
         }
       }}>
-        <Box sx={{
-          maxWidth: 1400,
-          mx: 'auto',
-          px: 4,
-          py: 3,
-        }}>
-          <List disablePadding>
+        <List disablePadding>
         {filtered.map((d, index) => (
           <ListItemButton
             key={d.id}
             onClick={() => onLoad?.(d.id)}
             selected={currentId === d.id}
             sx={{
-              mb: 0,
-              borderRadius: 3,
-              bgcolor: (theme) => currentId === d.id
-                ? alpha(theme.palette.primary.main, 0.12)
-                : 'transparent',
-              transition: 'all 0.2s',
+              borderRadius: 2,
+              bgcolor: 'transparent',
+              transition: 'all 0.15s',
+              mb: 0.5,
               '&:hover': {
-                bgcolor: (theme) => currentId === d.id
-                  ? alpha(theme.palette.primary.main, 0.16)
-                  : alpha(theme.palette.action.hover, 0.6),
+                bgcolor: (theme) => alpha(theme.palette.action.hover, 0.6),
               },
-              py: 3,
-              px: 3,
-              borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+              '&.Mui-selected': {
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                '&:hover': {
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                }
+              },
+              py: 2,
+              px: 2,
             }}
           >
-            <ListItemAvatar sx={{ minWidth: 72 }}>
+            <ListItemAvatar sx={{ minWidth: 60 }}>
               <Avatar
                 sx={{
-                  width: 64,
-                  height: 64,
-                  bgcolor: (theme) => currentId === d.id ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.12),
+                  width: 52,
+                  height: 52,
+                  bgcolor: (theme) => currentId === d.id ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.1),
                   color: currentId === d.id ? 'primary.contrastText' : 'primary.main',
-                  fontWeight: 800,
-                  fontSize: '1.75rem',
+                  fontWeight: 700,
+                  fontSize: '1.5rem',
                 }}
               >
                 {(d.name || d.fileName || 'D')[0].toUpperCase()}
@@ -278,8 +265,8 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             <ListItemText
               primary={
                 <Box component="div">
-                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" sx={{ mb: 0.5 }}>
-                    <Typography variant="h6" component="span" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.5 }}>
+                    <Typography variant="h6" component="span" sx={{ fontWeight: 700, fontSize: '1.05rem' }}>
                       {d.name || d.fileName || d.id}
                     </Typography>
                     {d.username && (
@@ -288,11 +275,12 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                         label={`@${d.username}`}
                         sx={{
                           fontWeight: 600,
-                          height: 24,
-                          bgcolor: (theme) => alpha(theme.palette.info.main, 0.08),
+                          height: 20,
+                          bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
                           color: 'info.main',
                           borderRadius: 1,
-                          fontSize: '0.75rem',
+                          fontSize: '0.7rem',
+                          '& .MuiChip-label': { px: 1 }
                         }}
                       />
                     )}
@@ -301,12 +289,13 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                         size="small"
                         label="Active"
                         sx={{
-                          fontWeight: 700,
-                          height: 24,
-                          bgcolor: (theme) => alpha(theme.palette.success.main, 0.12),
-                          color: 'success.main',
+                          fontWeight: 600,
+                          height: 20,
+                          bgcolor: (theme) => alpha(theme.palette.success.main, 0.15),
+                          color: 'success.dark',
                           borderRadius: 1,
-                          fontSize: '0.75rem',
+                          fontSize: '0.7rem',
+                          '& .MuiChip-label': { px: 1 }
                         }}
                       />
                     )}
@@ -340,23 +329,23 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               }
             />
             <Stack direction="row" spacing={0.5}>
-              <Tooltip title="Load Dataset" arrow>
+              <Tooltip title="Load">
                 <IconButton
-                  size="large"
+                  size="medium"
                   onClick={(e) => { e.stopPropagation(); onLoad?.(d.id); }}
                   sx={{
                     color: 'primary.main',
                     '&:hover': {
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
                     }
                   }}
                 >
-                  <PlayArrowIcon />
+                  <PlayArrowIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Rename" arrow>
+              <Tooltip title="Rename">
                 <IconButton
-                  size="large"
+                  size="medium"
                   onClick={(e) => { e.stopPropagation(); handleRename(d.id, d.name); }}
                   sx={{
                     color: 'text.secondary',
@@ -366,12 +355,12 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                     }
                   }}
                 >
-                  <EditIcon />
+                  <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete" arrow>
+              <Tooltip title="Delete">
                 <IconButton
-                  size="large"
+                  size="medium"
                   onClick={async (e) => {
                     e.stopPropagation();
                     const ok = window.confirm('Delete this dataset?');
@@ -381,11 +370,11 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                     color: 'text.secondary',
                     '&:hover': {
                       color: 'error.main',
-                      bgcolor: (theme) => alpha(theme.palette.error.main, 0.08),
+                      bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
                     }
                   }}
                 >
-                  <DeleteIcon />
+                  <DeleteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Stack>
@@ -393,23 +382,21 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
         ))}
           {!filtered.length && (
             <Box sx={{
-              py: 12,
-              px: 4,
+              py: 16,
               textAlign: 'center',
             }}>
-              <FolderZipIcon sx={{ fontSize: 96, color: 'text.disabled', mb: 3, opacity: 0.3 }} />
-              <Typography variant="h4" color="text.primary" sx={{ fontWeight: 700, mb: 1 }}>
+              <FolderZipIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2, opacity: 0.4 }} />
+              <Typography variant="h5" color="text.primary" sx={{ fontWeight: 600, mb: 1 }}>
                 No datasets yet
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+              <Typography variant="body1" color="text.secondary">
                 Upload a ZIP file or folder to get started
               </Typography>
             </Box>
           )}
-          </List>
-        </Box>
+        </List>
       </Box>
-    </Paper>
+    </Box>
   );
 }
 
