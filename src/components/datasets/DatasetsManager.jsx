@@ -17,6 +17,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  alpha,
 } from '@mui/material';
 import {
   PlayArrow as PlayArrowIcon,
@@ -24,6 +25,7 @@ import {
   Edit as EditIcon,
   FilterList as FilterListIcon,
   FolderZip as FolderZipIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, onDelete, onRename, currentId }) {
@@ -59,85 +61,302 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
   };
 
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, p: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <FolderZipIcon color="primary" />
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>Datasets</Typography>
-          {!!datasets?.length && <Chip size="small" label={datasets.length} />}
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 4,
+        p: 3,
+        background: (theme) => theme.palette.mode === 'dark'
+          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.1)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`
+          : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${theme.palette.background.paper} 100%)`,
+        border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+        backdropFilter: 'blur(10px)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          boxShadow: (theme) => `0 8px 32px ${alpha(theme.palette.primary.main, 0.12)}`,
+          transform: 'translateY(-2px)',
+        }
+      }}
+    >
+      {/* Header */}
+      <Box sx={{
+        mb: 3,
+        pb: 2,
+        borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+      }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Box sx={{
+              p: 1.5,
+              borderRadius: 3,
+              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`
+            }}>
+              <FolderZipIcon sx={{ color: 'primary.contrastText', fontSize: 28 }} />
+            </Box>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
+                Datasets
+              </Typography>
+              {!!datasets?.length && (
+                <Typography variant="caption" color="text.secondary">
+                  {datasets.length} {datasets.length === 1 ? 'dataset' : 'datasets'} saved
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+          <Button
+            variant="contained"
+            size="medium"
+            startIcon={<RefreshIcon />}
+            onClick={onRefresh}
+            disabled={loading}
+            sx={{
+              borderRadius: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              '&:hover': {
+                boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
+                transform: 'translateY(-1px)',
+              }
+            }}
+          >
+            Refresh
+          </Button>
         </Stack>
-        <Stack direction="row" spacing={1}>
-          <Button variant="outlined" size="small" onClick={onRefresh} disabled={loading}>Refresh</Button>
-        </Stack>
-      </Stack>
+      </Box>
+
+      {/* Search/Filter */}
       <TextField
-        size="small"
-        placeholder="Filter datasets..."
+        size="medium"
+        placeholder="Search datasets..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         fullWidth
-        sx={{ mb: 1.5 }}
-        InputProps={{ startAdornment: (
-          <InputAdornment position="start">
-            <FilterListIcon fontSize="small" />
-          </InputAdornment>
-        )}}
+        sx={{
+          mb: 3,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 3,
+            backgroundColor: (theme) => alpha(theme.palette.background.default, 0.6),
+            transition: 'all 0.3s',
+            '&:hover': {
+              backgroundColor: (theme) => alpha(theme.palette.background.default, 0.8),
+            },
+            '&.Mui-focused': {
+              backgroundColor: (theme) => alpha(theme.palette.background.default, 1),
+              boxShadow: (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.1)}`,
+            }
+          }
+        }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <FilterListIcon sx={{ color: 'primary.main' }} />
+            </InputAdornment>
+          )
+        }}
       />
-      <Divider sx={{ mb: 1 }} />
-      <List dense sx={{ maxHeight: 420, overflow: 'auto' }}>
-        {filtered.map((d) => (
-          <ListItemButton key={d.id} divider onClick={() => onLoad?.(d.id)} selected={currentId === d.id}>
-            <ListItemAvatar sx={{ minWidth: 40 }}>
-              <Avatar sx={{ bgcolor: currentId === d.id ? 'primary.main' : 'primary.light', color: currentId === d.id ? 'primary.contrastText' : 'primary.main' }}>{(d.name || d.fileName || 'D')[0].toUpperCase()}</Avatar>
+
+      {/* List */}
+      <List
+        sx={{
+          maxHeight: 450,
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: (theme) => alpha(theme.palette.divider, 0.1),
+            borderRadius: 4,
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: (theme) => alpha(theme.palette.primary.main, 0.3),
+            borderRadius: 4,
+            '&:hover': {
+              background: (theme) => alpha(theme.palette.primary.main, 0.5),
+            }
+          }
+        }}
+      >
+        {filtered.map((d, index) => (
+          <ListItemButton
+            key={d.id}
+            onClick={() => onLoad?.(d.id)}
+            selected={currentId === d.id}
+            sx={{
+              mb: 1.5,
+              borderRadius: 3,
+              border: (theme) => currentId === d.id
+                ? `2px solid ${theme.palette.primary.main}`
+                : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              background: (theme) => currentId === d.id
+                ? alpha(theme.palette.primary.main, 0.08)
+                : alpha(theme.palette.background.default, 0.4),
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: (theme) => currentId === d.id
+                  ? alpha(theme.palette.primary.main, 0.12)
+                  : alpha(theme.palette.background.default, 0.7),
+                transform: 'translateX(4px)',
+                boxShadow: (theme) => `0 4px 16px ${alpha(theme.palette.primary.main, 0.1)}`,
+              },
+              p: 2,
+            }}
+          >
+            <ListItemAvatar sx={{ minWidth: 56 }}>
+              <Avatar
+                sx={{
+                  width: 48,
+                  height: 48,
+                  background: (theme) => currentId === d.id
+                    ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
+                    : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.7)}, ${alpha(theme.palette.primary.main, 0.7)})`,
+                  color: 'primary.contrastText',
+                  fontWeight: 800,
+                  fontSize: '1.2rem',
+                  boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                }}
+              >
+                {(d.name || d.fileName || 'D')[0].toUpperCase()}
+              </Avatar>
             </ListItemAvatar>
             <ListItemText
               primary={
                 <Box component="div">
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    <Typography variant="body1" component="span" sx={{ fontWeight: 700 }}>{d.name || d.fileName || d.id}</Typography>
-                    {d.username && <Chip size="small" label={`@${d.username}`} />}
-                    {currentId === d.id && <Chip size="small" color="success" label="Loaded" />}
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.5 }}>
+                    <Typography variant="body1" component="span" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                      {d.name || d.fileName || d.id}
+                    </Typography>
+                    {d.username && (
+                      <Chip
+                        size="small"
+                        label={`@${d.username}`}
+                        sx={{
+                          fontWeight: 600,
+                          background: (theme) => alpha(theme.palette.info.main, 0.1),
+                          color: 'info.main',
+                          borderRadius: 2,
+                        }}
+                      />
+                    )}
+                    {currentId === d.id && (
+                      <Chip
+                        size="small"
+                        label="Active"
+                        sx={{
+                          fontWeight: 700,
+                          background: (theme) => `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+                          color: 'success.contrastText',
+                          borderRadius: 2,
+                          boxShadow: (theme) => `0 2px 8px ${alpha(theme.palette.success.main, 0.3)}`,
+                        }}
+                      />
+                    )}
                   </Stack>
                 </Box>
               }
               secondary={
-                <Box component="div">
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    <Typography variant="caption" component="span" color="text.secondary">{d.type?.toUpperCase()}</Typography>
-                    {d.fileName && <Typography variant="caption" component="span" color="text.secondary">{d.fileName}</Typography>}
-                    <Typography variant="caption" component="span" color="text.secondary">{formatSize(d.size)}</Typography>
-                    {d.createdAt && <Typography variant="caption" component="span" color="text.secondary">Created {new Date(d.createdAt).toLocaleString()}</Typography>}
-                    {d.lastUsedAt && <Typography variant="caption" component="span" color="text.secondary">Last used {new Date(d.lastUsedAt).toLocaleString()}</Typography>}
+                <Box component="div" sx={{ mt: 0.5 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                    {d.type && (
+                      <Chip
+                        size="small"
+                        label={d.type.toUpperCase()}
+                        variant="outlined"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          borderRadius: 1.5,
+                        }}
+                      />
+                    )}
+                    <Typography variant="caption" component="span" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      {formatSize(d.size)}
+                    </Typography>
+                    {d.lastUsedAt && (
+                      <Typography variant="caption" component="span" color="text.secondary">
+                        Used {new Date(d.lastUsedAt).toLocaleDateString()}
+                      </Typography>
+                    )}
                   </Stack>
                 </Box>
               }
             />
             <Stack direction="row" spacing={0.5}>
-              <Tooltip title="Load">
-                <IconButton edge="end" size="small" onClick={(e) => { e.stopPropagation(); onLoad?.(d.id); }}>
-                  <PlayArrowIcon fontSize="small" />
+              <Tooltip title="Load Dataset" arrow>
+                <IconButton
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); onLoad?.(d.id); }}
+                  sx={{
+                    color: 'primary.main',
+                    '&:hover': {
+                      background: (theme) => alpha(theme.palette.primary.main, 0.1),
+                      transform: 'scale(1.1)',
+                    }
+                  }}
+                >
+                  <PlayArrowIcon />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Rename">
-                <IconButton edge="end" size="small" onClick={(e) => { e.stopPropagation(); handleRename(d.id, d.name); }}>
-                  <EditIcon fontSize="small" />
+              <Tooltip title="Rename" arrow>
+                <IconButton
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); handleRename(d.id, d.name); }}
+                  sx={{
+                    color: 'info.main',
+                    '&:hover': {
+                      background: (theme) => alpha(theme.palette.info.main, 0.1),
+                      transform: 'scale(1.1)',
+                    }
+                  }}
+                >
+                  <EditIcon />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete">
-                <IconButton edge="end" size="small" onClick={async (e) => {
-                  e.stopPropagation();
-                  const ok = window.confirm('Delete this dataset?');
-                  if (ok) { await onDelete?.(d.id); await onRefresh?.(); }
-                }}>
-                  <DeleteIcon fontSize="small" />
+              <Tooltip title="Delete" arrow>
+                <IconButton
+                  size="small"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const ok = window.confirm('Delete this dataset?');
+                    if (ok) { await onDelete?.(d.id); await onRefresh?.(); }
+                  }}
+                  sx={{
+                    color: 'error.main',
+                    '&:hover': {
+                      background: (theme) => alpha(theme.palette.error.main, 0.1),
+                      transform: 'scale(1.1)',
+                    }
+                  }}
+                >
+                  <DeleteIcon />
                 </IconButton>
               </Tooltip>
             </Stack>
           </ListItemButton>
         ))}
         {!filtered.length && (
-          <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-            <Typography variant="body2">No datasets saved yet. Upload a ZIP to save it here.</Typography>
+          <Box sx={{
+            p: 6,
+            textAlign: 'center',
+            borderRadius: 3,
+            background: (theme) => alpha(theme.palette.background.default, 0.4),
+            border: (theme) => `2px dashed ${alpha(theme.palette.divider, 0.2)}`,
+          }}>
+            <FolderZipIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2, opacity: 0.3 }} />
+            <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+              No datasets yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Upload a ZIP file to create your first dataset
+            </Typography>
           </Box>
         )}
       </List>

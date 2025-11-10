@@ -849,34 +849,6 @@ const AppContent = ({
                   currentId={currentDatasetId}
                 />
               )}
-              {(!isUploaded) && (
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>How it works</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Export your Instagram data (ZIP or folder) then drop the ZIP here. We process it locally in your browser; no data leaves your device.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              )}
-              {(!isUploaded) && (
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                      <ColorLensIcon color="primary" />
-                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Material You</Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Dynamic color system with accessible contrast and soft shapes.
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Chip label="Responsive" size="small" color="primary" variant="outlined" />
-                      <Chip label="Modern" size="small" color="primary" variant="outlined" />
-                      <Chip label="Accessible" size="small" color="primary" variant="outlined" />
-                    </Stack>
-                  </CardContent>
-                </Card>
-              )}
               {isUploaded && advanced && activeSection === 'overview' && (
                 <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
               )}
