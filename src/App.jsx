@@ -864,14 +864,41 @@ const AppContent = ({
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Toaster
-        position="top-right"
+        position="top-center"
         toastOptions={{
-          duration: 4000,
+          duration: 3500,
           style: {
-            background: isDark ? '#101528' : '#ffffff',
-            color: isDark ? '#E6EAF2' : '#101528',
-            border: `1px solid ${isDark ? '#24304A' : '#e2e8f0'}`,
-            borderRadius: '16px',
+            background: isDark ? '#1e1e1e' : '#ffffff',
+            color: isDark ? '#e0e0e0' : '#1a1a1a',
+            border: 'none',
+            borderRadius: '12px',
+            boxShadow: isDark
+              ? '0 4px 12px rgba(0, 0, 0, 0.5)'
+              : '0 4px 12px rgba(0, 0, 0, 0.15)',
+            padding: '16px 20px',
+            fontSize: '0.95rem',
+            fontWeight: 500,
+            maxWidth: '500px',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#4caf50',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#f44336',
+              secondary: '#ffffff',
+            },
+          },
+          loading: {
+            iconTheme: {
+              primary: '#2196f3',
+              secondary: '#ffffff',
+            },
           },
         }}
       />
