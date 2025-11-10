@@ -68,11 +68,14 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
     <Paper
       elevation={0}
       sx={{
-        height: '100%',
+        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 0,
         bgcolor: 'background.default',
+        width: '100%',
+        maxWidth: '100%',
+        mx: 'auto',
       }}
     >
       {/* Hidden file inputs */}
@@ -95,12 +98,16 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
 
       {/* Header */}
       <Box sx={{
-        p: 3,
         borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
         bgcolor: 'background.paper',
       }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2} sx={{ mb: 2 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
+        <Box sx={{
+          maxWidth: 1200,
+          mx: 'auto',
+          p: 3,
+        }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2} sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
             <Box sx={{
               p: 2,
               borderRadius: 2,
@@ -193,6 +200,7 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
           }}
         />
       </Box>
+      </Box>
 
       {/* List */}
       <Box sx={{
@@ -214,7 +222,12 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
           }
         }
       }}>
-        <List sx={{ p: 2 }}>
+        <Box sx={{
+          maxWidth: 1200,
+          mx: 'auto',
+          p: 3,
+        }}>
+          <List disablePadding>
         {filtered.map((d, index) => (
           <ListItemButton
             key={d.id}
@@ -350,26 +363,26 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             </Stack>
           </ListItemButton>
         ))}
-        {!filtered.length && (
-          <Box sx={{
-            p: 8,
-            textAlign: 'center',
-            borderRadius: 2,
-            border: (theme) => `2px dashed ${theme.palette.divider}`,
-            bgcolor: 'background.default',
-            mx: 2,
-            my: 4,
-          }}>
-            <FolderZipIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 3 }} />
-            <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 700, mb: 1 }}>
-              No datasets yet
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Upload a ZIP file to create your first dataset
-            </Typography>
-          </Box>
-        )}
-        </List>
+          {!filtered.length && (
+            <Box sx={{
+              p: 8,
+              textAlign: 'center',
+              borderRadius: 2,
+              border: (theme) => `2px dashed ${theme.palette.divider}`,
+              bgcolor: 'background.default',
+              my: 4,
+            }}>
+              <FolderZipIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 3 }} />
+              <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 700, mb: 1 }}>
+                No datasets yet
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Upload a ZIP file to create your first dataset
+              </Typography>
+            </Box>
+          )}
+          </List>
+        </Box>
       </Box>
     </Paper>
   );

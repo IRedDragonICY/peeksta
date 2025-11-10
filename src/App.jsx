@@ -824,11 +824,16 @@ const AppContent = ({
           py: activeSection === 'datasets' ? 0 : { xs: 3, md: 6 },
           px: activeSection === 'datasets' ? 0 : undefined,
           '& .MuiPaper-root:empty': { display: 'none' },
-          height: activeSection === 'datasets' ? 'calc(100vh - 64px)' : 'auto',
+          height: activeSection === 'datasets' ? '100vh' : 'auto',
+          display: activeSection === 'datasets' ? 'flex' : 'block',
+          alignItems: activeSection === 'datasets' ? 'stretch' : undefined,
         }}
         ref={rootRef}
       >
-        <Grid container spacing={activeSection === 'datasets' ? 0 : 3}>
+        <Grid container spacing={activeSection === 'datasets' ? 0 : 3} sx={{
+          height: activeSection === 'datasets' ? '100%' : 'auto',
+          width: '100%',
+        }}>
           {activeSection !== 'datasets' && (
             <Grid item xs={12}>
               <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
@@ -841,8 +846,14 @@ const AppContent = ({
               </Paper>
             </Grid>
           )}
-          <Grid item xs={12} md={activeSection === 'datasets' ? 12 : 5}>
-            <Stack spacing={activeSection === 'datasets' ? 0 : 3} sx={{ height: '100%' }}>
+          <Grid item xs={12} md={activeSection === 'datasets' ? 12 : 5} sx={{
+            height: activeSection === 'datasets' ? '100%' : 'auto',
+            display: activeSection === 'datasets' ? 'flex' : 'block',
+          }}>
+            <Stack spacing={activeSection === 'datasets' ? 0 : 3} sx={{
+              height: '100%',
+              width: '100%',
+            }}>
               {activeSection === 'datasets' && (
                 <DatasetsManager
                   datasets={datasets}
