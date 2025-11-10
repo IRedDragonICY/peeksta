@@ -1,5 +1,5 @@
 # robots.txt for Peeksta - Instagram Data Analytics Tool
-# https://github.com/IRedDragonICY/peeksta
+# https://peeksta.vercel.app/
 
 # Allow all crawlers
 User-agent: *
@@ -12,7 +12,7 @@ Disallow: /*.json$
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://github.com/IRedDragonICY/peeksta/sitemap.xml
+Sitemap: https://peeksta.vercel.app/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1
