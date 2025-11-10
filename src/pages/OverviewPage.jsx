@@ -138,10 +138,11 @@ export default function OverviewPage({ advanced, mode }) {
       </Box>
 
       {/* Scrollable Content */}
-      <Box sx={{ flex: 1, overflow: 'auto', bgcolor: 'background.default', px: { xs: 3, md: 6 }, py: 3 }}>
-        <Stack spacing={3}>
-          {/* KPI Cards */}
-          <Grid container spacing={2.5}>
+      <Box sx={{ flex: 1, overflow: 'auto', bgcolor: 'background.default', px: { xs: 3, md: 6 }, py: 3, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ width: '100%', maxWidth: '1400px' }}>
+          <Stack spacing={3}>
+            {/* KPI Cards */}
+            <Grid container spacing={2.5}>
             <Grid item xs={12} sm={6} lg={3}>
               <ModernKpiCard
                 icon={PeopleIcon}
@@ -249,7 +250,8 @@ export default function OverviewPage({ advanced, mode }) {
               </Box>
             </Grid>
           </Grid>
-        </Stack>
+          </Stack>
+        </Box>
       </Box>
     </Box>
   );
