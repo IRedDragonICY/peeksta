@@ -66,20 +66,11 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
 
   return (
     <Paper
-      elevation={0}
+      variant="outlined"
       sx={{
         borderRadius: 4,
         p: 3,
-        background: (theme) => theme.palette.mode === 'dark'
-          ? `linear-gradient(135deg, ${alpha(theme.palette.primary.dark, 0.1)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`
-          : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${theme.palette.background.paper} 100%)`,
-        border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-        backdropFilter: 'blur(10px)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          boxShadow: (theme) => `0 8px 32px ${alpha(theme.palette.primary.main, 0.12)}`,
-          transform: 'translateY(-2px)',
-        }
+        borderColor: (theme) => alpha(theme.palette.divider, 0.2),
       }}
     >
       {/* Hidden file inputs */}
@@ -104,23 +95,22 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
       <Box sx={{
         mb: 3,
         pb: 2,
-        borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+        borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`,
       }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Box sx={{
               p: 1.5,
               borderRadius: 3,
-              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              bgcolor: 'primary.main',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`
             }}>
               <FolderZipIcon sx={{ color: 'primary.contrastText', fontSize: 28 }} />
             </Box>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: '-0.5px' }}>
                 Datasets
               </Typography>
               {!!datasets?.length && (
@@ -142,12 +132,6 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 textTransform: 'none',
                 fontWeight: 600,
                 px: 2,
-                borderColor: (theme) => alpha(theme.palette.primary.main, 0.5),
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  background: (theme) => alpha(theme.palette.primary.main, 0.08),
-                  transform: 'translateY(-1px)',
-                }
               }}
             >
               Folder
@@ -155,6 +139,7 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             <Button
               variant="contained"
               size="medium"
+              color="success"
               startIcon={<AddIcon />}
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing || loading}
@@ -163,12 +148,6 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 textTransform: 'none',
                 fontWeight: 600,
                 px: 3,
-                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.success.main, 0.25)}`,
-                background: (theme) => `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
-                '&:hover': {
-                  boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.success.main, 0.35)}`,
-                  transform: 'translateY(-1px)',
-                }
               }}
             >
               Add ZIP
@@ -184,12 +163,6 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 textTransform: 'none',
                 fontWeight: 600,
                 px: 3,
-                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
-                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                '&:hover': {
-                  boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
-                  transform: 'translateY(-1px)',
-                }
               }}
             >
               Refresh
@@ -261,16 +234,14 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               border: (theme) => currentId === d.id
                 ? `2px solid ${theme.palette.primary.main}`
                 : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              background: (theme) => currentId === d.id
+              bgcolor: (theme) => currentId === d.id
                 ? alpha(theme.palette.primary.main, 0.08)
-                : alpha(theme.palette.background.default, 0.4),
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                : 'transparent',
+              transition: 'all 0.2s',
               '&:hover': {
-                background: (theme) => currentId === d.id
+                bgcolor: (theme) => currentId === d.id
                   ? alpha(theme.palette.primary.main, 0.12)
-                  : alpha(theme.palette.background.default, 0.7),
-                transform: 'translateX(4px)',
-                boxShadow: (theme) => `0 4px 16px ${alpha(theme.palette.primary.main, 0.1)}`,
+                  : 'action.hover',
               },
               p: 2,
             }}
@@ -280,13 +251,10 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                 sx={{
                   width: 48,
                   height: 48,
-                  background: (theme) => currentId === d.id
-                    ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
-                    : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.7)}, ${alpha(theme.palette.primary.main, 0.7)})`,
+                  bgcolor: currentId === d.id ? 'primary.main' : 'primary.light',
                   color: 'primary.contrastText',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   fontSize: '1.2rem',
-                  boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
                 }}
               >
                 {(d.name || d.fileName || 'D')[0].toUpperCase()}
@@ -305,7 +273,7 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                         label={`@${d.username}`}
                         sx={{
                           fontWeight: 600,
-                          background: (theme) => alpha(theme.palette.info.main, 0.1),
+                          bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
                           color: 'info.main',
                           borderRadius: 2,
                         }}
@@ -315,12 +283,10 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
                       <Chip
                         size="small"
                         label="Active"
+                        color="success"
                         sx={{
-                          fontWeight: 700,
-                          background: (theme) => `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
-                          color: 'success.contrastText',
+                          fontWeight: 600,
                           borderRadius: 2,
-                          boxShadow: (theme) => `0 2px 8px ${alpha(theme.palette.success.main, 0.3)}`,
                         }}
                       />
                     )}
@@ -359,14 +325,8 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               <Tooltip title="Load Dataset" arrow>
                 <IconButton
                   size="small"
+                  color="primary"
                   onClick={(e) => { e.stopPropagation(); onLoad?.(d.id); }}
-                  sx={{
-                    color: 'primary.main',
-                    '&:hover': {
-                      background: (theme) => alpha(theme.palette.primary.main, 0.1),
-                      transform: 'scale(1.1)',
-                    }
-                  }}
                 >
                   <PlayArrowIcon />
                 </IconButton>
@@ -374,14 +334,8 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               <Tooltip title="Rename" arrow>
                 <IconButton
                   size="small"
+                  color="info"
                   onClick={(e) => { e.stopPropagation(); handleRename(d.id, d.name); }}
-                  sx={{
-                    color: 'info.main',
-                    '&:hover': {
-                      background: (theme) => alpha(theme.palette.info.main, 0.1),
-                      transform: 'scale(1.1)',
-                    }
-                  }}
                 >
                   <EditIcon />
                 </IconButton>
@@ -389,17 +343,11 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               <Tooltip title="Delete" arrow>
                 <IconButton
                   size="small"
+                  color="error"
                   onClick={async (e) => {
                     e.stopPropagation();
                     const ok = window.confirm('Delete this dataset?');
                     if (ok) { await onDelete?.(d.id); await onRefresh?.(); }
-                  }}
-                  sx={{
-                    color: 'error.main',
-                    '&:hover': {
-                      background: (theme) => alpha(theme.palette.error.main, 0.1),
-                      transform: 'scale(1.1)',
-                    }
                   }}
                 >
                   <DeleteIcon />
@@ -413,10 +361,9 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
             p: 6,
             textAlign: 'center',
             borderRadius: 3,
-            background: (theme) => alpha(theme.palette.background.default, 0.4),
-            border: (theme) => `2px dashed ${alpha(theme.palette.divider, 0.2)}`,
+            border: (theme) => `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
           }}>
-            <FolderZipIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2, opacity: 0.3 }} />
+            <FolderZipIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
               No datasets yet
             </Typography>
