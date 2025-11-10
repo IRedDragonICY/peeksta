@@ -1,25 +1,127 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Stack, Typography, Box, Chip, Grid, alpha } from '@mui/material';
-import { Dashboard as DashboardIcon } from '@mui/icons-material';
-import KpiCard from '../components/overview/KpiCard.jsx';
+import { Stack, Typography, Box, Grid, alpha, LinearProgress, Avatar } from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
+  PersonAdd as PersonAddIcon,
+  PersonRemove as PersonRemoveIcon,
+  Link as LinkIcon,
+  TrendingUp as TrendingUpIcon,
+  Language as LanguageIcon,
+} from '@mui/icons-material';
 import InsightsChart from '../components/charts/InsightsChart.jsx';
 
-function RowMini({ primary, secondary }) {
+// Modern KPI Card Component
+function ModernKpiCard({ icon: Icon, label, value, color = 'primary.main', bgColor }) {
+  const isNumber = typeof value === 'number' && isFinite(value);
+  const displayValue = isNumber ? value.toLocaleString() : (value ?? '0');
+
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Typography variant="body2">{primary}</Typography>
-      <Chip size="small" label={secondary} />
+    <Box
+      sx={{
+        bgcolor: 'background.paper',
+        borderRadius: 3,
+        p: 3,
+        transition: 'all 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: (theme) => `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
+        }
+      }}
+    >
+      <Stack spacing={2}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Avatar
+            sx={{
+              bgcolor: bgColor || alpha(color, 0.1),
+              color: color,
+              width: 56,
+              height: 56,
+            }}
+          >
+            <Icon sx={{ fontSize: 28 }} />
+          </Avatar>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1, color: color }}>
+              {displayValue}
+            </Typography>
+          </Box>
+        </Box>
+        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+          {label}
+        </Typography>
+      </Stack>
     </Box>
   );
 }
 
-RowMini.propTypes = {
-  primary: PropTypes.string.isRequired,
-  secondary: PropTypes.string.isRequired,
+ModernKpiCard.propTypes = {
+  icon: PropTypes.elementType.isRequired,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  color: PropTypes.string,
+  bgColor: PropTypes.string,
+};
+
+// Domain Row Component
+function DomainRow({ domain, count, maxCount, index }) {
+  const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+  const colors = ['#1976d2', '#dc004e', '#9c27b0', '#f57c00', '#388e3c', '#00acc1', '#7b1fa2', '#c62828'];
+  const color = colors[index % colors.length];
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Avatar
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: alpha(color, 0.15),
+              color: color,
+              fontSize: '0.875rem',
+              fontWeight: 700,
+            }}
+          >
+            {index + 1}
+          </Avatar>
+          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+            {domain}
+          </Typography>
+        </Stack>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: color }}>
+          {count}
+        </Typography>
+      </Stack>
+      <LinearProgress
+        variant="determinate"
+        value={percentage}
+        sx={{
+          height: 8,
+          borderRadius: 4,
+          bgcolor: (theme) => alpha(theme.palette.action.hover, 0.5),
+          '& .MuiLinearProgress-bar': {
+            borderRadius: 4,
+            bgcolor: color,
+          }
+        }}
+      />
+    </Box>
+  );
+}
+
+DomainRow.propTypes = {
+  domain: PropTypes.string.isRequired,
+  count: PropTypes.number.isRequired,
+  maxCount: PropTypes.number.isRequired,
+  index: PropTypes.number.isRequired,
 };
 
 export default function OverviewPage({ advanced, mode }) {
+  const topDomains = advanced.linkHistory.topDomains.slice(0, 6);
+  const maxCount = topDomains.length > 0 ? Math.max(...topDomains.map(d => d.count)) : 0;
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', width: '100%' }}>
       {/* Header */}
@@ -39,29 +141,114 @@ export default function OverviewPage({ advanced, mode }) {
       <Box sx={{ flex: 1, overflow: 'auto', bgcolor: 'background.default', px: { xs: 3, md: 6 }, py: 3 }}>
         <Stack spacing={3}>
           {/* KPI Cards */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={3}><KpiCard label="Followers" value={advanced.followers.count} /></Grid>
-            <Grid item xs={12} md={3}><KpiCard label="Following" value={advanced.following.count} /></Grid>
-            <Grid item xs={12} md={3}><KpiCard label="Not Follow Back" value={advanced.notFollowingBack.length} /></Grid>
-            <Grid item xs={12} md={3}><KpiCard label="Links Visited" value={advanced.linkHistory.count} /></Grid>
+          <Grid container spacing={2.5}>
+            <Grid item xs={12} sm={6} lg={3}>
+              <ModernKpiCard
+                icon={PeopleIcon}
+                label="Followers"
+                value={advanced.followers.count}
+                color="#1976d2"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <ModernKpiCard
+                icon={PersonAddIcon}
+                label="Following"
+                value={advanced.following.count}
+                color="#388e3c"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <ModernKpiCard
+                icon={PersonRemoveIcon}
+                label="Not Follow Back"
+                value={advanced.notFollowingBack.length}
+                color="#f57c00"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} lg={3}>
+              <ModernKpiCard
+                icon={LinkIcon}
+                label="Links Visited"
+                value={advanced.linkHistory.count}
+                color="#9c27b0"
+              />
+            </Grid>
           </Grid>
 
-          {/* Engagement Chart */}
-          <Box sx={{ bgcolor: 'background.paper', borderRadius: 3, p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Engagement Over Time</Typography>
-            <InsightsChart data={advanced.insights.posts} mode={mode} />
-          </Box>
+          {/* Two Column Layout */}
+          <Grid container spacing={3}>
+            {/* Engagement Chart */}
+            <Grid item xs={12} lg={8}>
+              <Box sx={{ bgcolor: 'background.paper', borderRadius: 3, p: 3, height: '100%' }}>
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                      color: 'primary.main',
+                      width: 40,
+                      height: 40,
+                    }}
+                  >
+                    <TrendingUpIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Engagement Over Time</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Track your content performance
+                    </Typography>
+                  </Box>
+                </Stack>
+                <InsightsChart data={advanced.insights.posts} mode={mode} />
+              </Box>
+            </Grid>
 
-          {/* Top Link Domains */}
-          <Box sx={{ bgcolor: 'background.paper', borderRadius: 3, p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Top Link Domains</Typography>
-            <Stack spacing={0.75}>
-              {advanced.linkHistory.topDomains.slice(0, 8).map((d) => {
-                const k = typeof d.key === 'string' ? d.key : String(d.key);
-                return <RowMini key={k} primary={k} secondary={`${d.count}`} />;
-              })}
-            </Stack>
-          </Box>
+            {/* Top Link Domains */}
+            <Grid item xs={12} lg={4}>
+              <Box sx={{ bgcolor: 'background.paper', borderRadius: 3, p: 3, height: '100%' }}>
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: (theme) => alpha(theme.palette.info.main, 0.1),
+                      color: 'info.main',
+                      width: 40,
+                      height: 40,
+                    }}
+                  >
+                    <LanguageIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Top Domains</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Most visited websites
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Box sx={{ mt: 2 }}>
+                  {topDomains.length > 0 ? (
+                    topDomains.map((d, index) => {
+                      const k = typeof d.key === 'string' ? d.key : String(d.key);
+                      return (
+                        <DomainRow
+                          key={k}
+                          domain={k}
+                          count={d.count}
+                          maxCount={maxCount}
+                          index={index}
+                        />
+                      );
+                    })
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No link history available
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Stack>
       </Box>
     </Box>
