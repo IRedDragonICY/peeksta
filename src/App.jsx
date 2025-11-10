@@ -826,16 +826,18 @@ const AppContent = ({
         ref={rootRef}
       >
         <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
-            {!isUploaded && (
-                <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
+          {activeSection !== 'datasets' && (
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
+              {!isUploaded && (
+                  <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
+                )}
+              {!!progressText && !isUploaded && (
+                <Typography variant="caption" color="text.secondary">{progressText}</Typography>
               )}
-            {!!progressText && !isUploaded && (
-              <Typography variant="caption" color="text.secondary">{progressText}</Typography>
-            )}
-            </Paper>
-          </Grid>
+              </Paper>
+            </Grid>
+          )}
           <Grid item xs={12} md={5}>
             <Stack spacing={3}>
               {activeSection === 'datasets' && (
@@ -847,6 +849,9 @@ const AppContent = ({
                   onDelete={onDeleteDataset}
                   onRename={onRenameDataset}
                   currentId={currentDatasetId}
+                  onFileChange={handleFileChange}
+                  onFolderChange={handleFolderChange}
+                  isProcessing={isProcessing}
                 />
               )}
               {isUploaded && advanced && activeSection === 'overview' && (

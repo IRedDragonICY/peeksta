@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import {
   Avatar,
@@ -26,10 +26,14 @@ import {
   FilterList as FilterListIcon,
   FolderZip as FolderZipIcon,
   Refresh as RefreshIcon,
+  Add as AddIcon,
+  CreateNewFolder as CreateNewFolderIcon,
 } from '@mui/icons-material';
 
-export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, onDelete, onRename, currentId }) {
+export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, onDelete, onRename, currentId, onFileChange, onFolderChange, isProcessing }) {
   const [filter, setFilter] = useState('');
+  const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
 
   const filtered = (datasets || []).filter((d) => {
     if (!filter) return true;
@@ -78,13 +82,31 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
         }
       }}
     >
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".zip"
+        onChange={onFileChange}
+        style={{ display: 'none' }}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        webkitdirectory="true"
+        directory="true"
+        multiple
+        onChange={onFolderChange}
+        style={{ display: 'none' }}
+      />
+
       {/* Header */}
       <Box sx={{
         mb: 3,
         pb: 2,
         borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
       }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Box sx={{
               p: 1.5,
@@ -108,27 +130,71 @@ export default function DatasetsManager({ datasets, loading, onRefresh, onLoad, 
               )}
             </Box>
           </Stack>
-          <Button
-            variant="contained"
-            size="medium"
-            startIcon={<RefreshIcon />}
-            onClick={onRefresh}
-            disabled={loading}
-            sx={{
-              borderRadius: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-              boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
-              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              '&:hover': {
-                boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
-                transform: 'translateY(-1px)',
-              }
-            }}
-          >
-            Refresh
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              size="medium"
+              startIcon={<CreateNewFolderIcon />}
+              onClick={() => folderInputRef.current?.click()}
+              disabled={isProcessing || loading}
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 2,
+                borderColor: (theme) => alpha(theme.palette.primary.main, 0.5),
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  background: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  transform: 'translateY(-1px)',
+                }
+              }}
+            >
+              Folder
+            </Button>
+            <Button
+              variant="contained"
+              size="medium"
+              startIcon={<AddIcon />}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing || loading}
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.success.main, 0.25)}`,
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+                '&:hover': {
+                  boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.success.main, 0.35)}`,
+                  transform: 'translateY(-1px)',
+                }
+              }}
+            >
+              Add ZIP
+            </Button>
+            <Button
+              variant="contained"
+              size="medium"
+              startIcon={<RefreshIcon />}
+              onClick={onRefresh}
+              disabled={loading || isProcessing}
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                '&:hover': {
+                  boxShadow: (theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
+                  transform: 'translateY(-1px)',
+                }
+              }}
+            >
+              Refresh
+            </Button>
+          </Stack>
         </Stack>
       </Box>
 
@@ -381,6 +447,9 @@ DatasetsManager.propTypes = {
   onDelete: PropTypes.func,
   onRename: PropTypes.func,
   currentId: PropTypes.string,
+  onFileChange: PropTypes.func,
+  onFolderChange: PropTypes.func,
+  isProcessing: PropTypes.bool,
 };
 
 
