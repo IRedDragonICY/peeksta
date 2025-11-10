@@ -13,20 +13,24 @@ import {
 import InsightsChart from '../components/charts/InsightsChart.jsx';
 
 // Modern KPI Card Component
-function ModernKpiCard({ icon: Icon, label, value, color = 'primary.main', bgColor }) {
+function ModernKpiCard({ icon: Icon, label, value, color = 'primary.main', bgColor, onClick }) {
   const isNumber = typeof value === 'number' && isFinite(value);
   const displayValue = isNumber ? value.toLocaleString() : (value ?? '0');
 
   return (
     <Box
+      onClick={onClick}
       sx={{
         bgcolor: 'background.paper',
         borderRadius: 3,
         p: 3,
         transition: 'all 0.2s',
+        cursor: onClick ? 'pointer' : 'default',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: (theme) => `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`,
+          transform: onClick ? 'translateY(-4px)' : 'none',
+          boxShadow: (theme) => onClick
+            ? `0 8px 24px ${alpha(theme.palette.primary.main, 0.12)}`
+            : 'none',
         }
       }}
     >
@@ -62,6 +66,7 @@ ModernKpiCard.propTypes = {
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   color: PropTypes.string,
   bgColor: PropTypes.string,
+  onClick: PropTypes.func,
 };
 
 // Domain Row Component
@@ -118,9 +123,15 @@ DomainRow.propTypes = {
   index: PropTypes.number.isRequired,
 };
 
-export default function OverviewPage({ advanced, mode }) {
+export default function OverviewPage({ advanced, mode, onNavigateToConnections }) {
   const topDomains = advanced.linkHistory.topDomains.slice(0, 6);
   const maxCount = topDomains.length > 0 ? Math.max(...topDomains.map(d => d.count)) : 0;
+
+  const handleNavigateToSection = (section) => {
+    if (onNavigateToConnections) {
+      onNavigateToConnections(section);
+    }
+  };
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', width: '100%' }}>
@@ -149,6 +160,7 @@ export default function OverviewPage({ advanced, mode }) {
                 label="Followers"
                 value={advanced.followers.count}
                 color="#1976d2"
+                onClick={() => handleNavigateToSection('followers')}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
@@ -157,6 +169,7 @@ export default function OverviewPage({ advanced, mode }) {
                 label="Following"
                 value={advanced.following.count}
                 color="#388e3c"
+                onClick={() => handleNavigateToSection('following')}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
@@ -165,6 +178,7 @@ export default function OverviewPage({ advanced, mode }) {
                 label="Not Follow Back"
                 value={advanced.notFollowingBack.length}
                 color="#f57c00"
+                onClick={() => handleNavigateToSection('notBack')}
               />
             </Grid>
             <Grid item xs={12} sm={6} lg={3}>
@@ -260,4 +274,5 @@ export default function OverviewPage({ advanced, mode }) {
 OverviewPage.propTypes = {
   advanced: PropTypes.object.isRequired,
   mode: PropTypes.oneOf(['dark', 'light']).isRequired,
+  onNavigateToConnections: PropTypes.func,
 };

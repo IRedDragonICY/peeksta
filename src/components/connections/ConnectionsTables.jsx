@@ -92,13 +92,22 @@ function getTabColor(key) {
   return colorMap[key] || 'default';
 }
 
-export default function ConnectionsTables({ data }) {
+export default function ConnectionsTables({ data, initialTab }) {
   const theme = useTheme();
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(initialTab || 0);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 15; // Increased for better modern experience
   const [sortDir, setSortDir] = useState('asc');
+
+  // Update tab when initialTab changes
+  React.useEffect(() => {
+    if (initialTab !== undefined && initialTab !== tab) {
+      setTab(initialTab);
+      setPage(1);
+      setSearch('');
+    }
+  }, [initialTab]);
 
   const tabs = useMemo(() => {
     return [
@@ -468,6 +477,7 @@ export default function ConnectionsTables({ data }) {
 
 ConnectionsTables.propTypes = {
   data: PropTypes.object.isRequired,
+  initialTab: PropTypes.number,
 };
 
 

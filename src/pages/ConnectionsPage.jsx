@@ -5,9 +5,23 @@ import { People as PeopleIcon } from '@mui/icons-material';
 import PieChart from '../components/charts/PieChart.jsx';
 import ConnectionsTables from '../components/connections/ConnectionsTables.jsx';
 
-export default function ConnectionsPage({ advanced }) {
+export default function ConnectionsPage({ advanced, initialSection }) {
   const theme = useTheme();
   const mode = theme.palette.mode === 'dark' ? 'dark' : 'light';
+
+  // Map section names to tab indices
+  const sectionToTabMap = {
+    'followers': 0,
+    'following': 1,
+    'notBack': 2,
+    'close': 3,
+    'pending': 4,
+    'recent': 5,
+    'removed': 6,
+    'unfollowed': 7,
+  };
+
+  const initialTab = initialSection ? sectionToTabMap[initialSection] : undefined;
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', width: '100%' }}>
@@ -53,7 +67,7 @@ export default function ConnectionsPage({ advanced }) {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Browse followers, following, not-follow-back and more
             </Typography>
-            <ConnectionsTables data={advanced} />
+            <ConnectionsTables data={advanced} initialTab={initialTab} />
           </Box>
         </Stack>
       </Box>
@@ -63,4 +77,5 @@ export default function ConnectionsPage({ advanced }) {
 
 ConnectionsPage.propTypes = {
   advanced: PropTypes.object.isRequired,
+  initialSection: PropTypes.string,
 };

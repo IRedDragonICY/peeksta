@@ -544,6 +544,7 @@ function App() {
       return 'overview';
     }
   });
+  const [connectionSection, setConnectionSection] = useState(null);
   const [datasets, setDatasets] = useState([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
   const restoreOnceRef = useRef(false);
@@ -802,6 +803,12 @@ function App() {
     try { localStorage.setItem('peeksta_active_section', activeSection); } catch (_) {}
   }, [activeSection]);
 
+  // Handle navigation from Overview to Connections with specific section
+  const handleNavigateToConnections = useCallback((section) => {
+    setConnectionSection(section);
+    setActiveSection('connections');
+  }, []);
+
   return (
     <ThemeProvider>
       <AppContent
@@ -819,6 +826,8 @@ function App() {
         progressText={progressText}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
+        connectionSection={connectionSection}
+        onNavigateToConnections={handleNavigateToConnections}
         datasets={datasets}
         datasetsLoading={datasetsLoading}
         refreshDatasets={refreshDatasets}
@@ -847,6 +856,8 @@ const AppContent = ({
   progressText,
   activeSection,
   setActiveSection,
+  connectionSection,
+  onNavigateToConnections,
   datasets,
   datasetsLoading,
   refreshDatasets,
@@ -952,11 +963,18 @@ const AppContent = ({
         ) : (
           <>
             {isUploaded && advanced && activeSection === 'overview' && (
-              <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+              <OverviewPage
+                advanced={advanced}
+                mode={isDark ? 'dark' : 'light'}
+                onNavigateToConnections={onNavigateToConnections}
+              />
             )}
 
             {isUploaded && advanced && activeSection === 'connections' && (
-              <ConnectionsPage advanced={advanced} />
+              <ConnectionsPage
+                advanced={advanced}
+                initialSection={connectionSection}
+              />
             )}
 
             {isUploaded && advanced && activeSection === 'messages' && (
@@ -1030,6 +1048,8 @@ AppContent.propTypes = {
   progressText: PropTypes.string,
   activeSection: PropTypes.string,
   setActiveSection: PropTypes.func,
+  connectionSection: PropTypes.string,
+  onNavigateToConnections: PropTypes.func,
   datasets: PropTypes.array,
   datasetsLoading: PropTypes.bool,
   refreshDatasets: PropTypes.func,
