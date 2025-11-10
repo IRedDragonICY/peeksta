@@ -924,8 +924,8 @@ const AppContent = ({
 
       <Box
         sx={{
-          height: (activeSection === 'datasets' || !isUploaded) ? '100vh' : 'auto',
-          overflow: (activeSection === 'datasets' || !isUploaded) ? 'hidden' : 'visible',
+          height: '100vh',
+          overflow: 'hidden',
         }}
         ref={rootRef}
       >
@@ -950,67 +950,55 @@ const AppContent = ({
             isProcessing={isProcessing}
           />
         ) : (
-          <Container
-            maxWidth="lg"
-            sx={{
-              py: { xs: 3, md: 6 },
-              '& .MuiPaper-root:empty': { display: 'none' },
-            }}
-          >
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={5}>
-                <Stack spacing={3}>
-                  {isUploaded && advanced && activeSection === 'overview' && (
-                    <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+          <>
+            {isUploaded && advanced && activeSection === 'overview' && (
+              <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'connections' && (
-                    <ConnectionsPage advanced={advanced} />
-                  )}
+            {isUploaded && advanced && activeSection === 'connections' && (
+              <ConnectionsPage advanced={advanced} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'messages' && (
-                    <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'messages' && (
+              <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'link-history' && (
-                    <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'link-history' && (
+              <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'logged-information' && (
-                    <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'logged-information' && (
+              <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'ads' && (
-                    <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'ads' && (
+              <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'apps' && (
-                    <AppsPage advanced={advanced} />
-                  )}
+            {isUploaded && advanced && activeSection === 'apps' && (
+              <AppsPage advanced={advanced} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'insights' && (
-                    <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'insights' && (
+              <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'threads' && (
-                    <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-                  )}
+            {isUploaded && advanced && activeSection === 'threads' && (
+              <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'preferences' && (
-                    <PreferencesPage advanced={advanced} />
-                  )}
+            {isUploaded && advanced && activeSection === 'preferences' && (
+              <PreferencesPage advanced={advanced} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'security' && (
-                    <SecurityPage advanced={advanced} />
-                  )}
+            {isUploaded && advanced && activeSection === 'security' && (
+              <SecurityPage advanced={advanced} />
+            )}
 
-                  {isUploaded && advanced && activeSection === 'personal' && (
-                    <PersonalPage advanced={advanced} />
-                  )}
-                </Stack>
-              </Grid>
-            </Grid>
-          </Container>
+            {isUploaded && advanced && activeSection === 'personal' && (
+              <PersonalPage advanced={advanced} />
+            )}
+          </>
         )}
       </Box>
 
