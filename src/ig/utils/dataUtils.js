@@ -25,7 +25,33 @@ export function extractStringListUsernames(items) {
  */
 export function extractRelationshipsFollowing(obj) {
   const list = obj?.relationships_following;
-  return extractStringListUsernames(Array.isArray(list) ? list : []);
+  if (!Array.isArray(list)) return [];
+
+  const usernames = [];
+  for (const item of list) {
+    // Try to get username from title field first (newer format)
+    if (item?.title) {
+      usernames.push(String(item.title).toLowerCase());
+      continue;
+    }
+
+    // Try string_list_data with value (older format)
+    const sld = item?.string_list_data?.[0];
+    if (sld?.value) {
+      usernames.push(String(sld.value).toLowerCase());
+      continue;
+    }
+
+    // Try to extract from href as last resort
+    if (sld?.href) {
+      const match = sld.href.match(/_u\/([^\/]+)/);
+      if (match?.[1]) {
+        usernames.push(String(match[1]).toLowerCase());
+      }
+    }
+  }
+
+  return usernames;
 }
 
 /**

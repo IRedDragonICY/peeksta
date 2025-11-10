@@ -29,7 +29,8 @@ import {
   Card,
   CardContent,
   Stack,
-  Chip
+  Chip,
+  alpha,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -39,9 +40,8 @@ import {
   Group as GroupIcon,
   Description as DescriptionIcon,
   ColorLens as ColorLensIcon,
-} from '@mui/icons-material';
-import {
   Visibility as VisibilityIcon,
+  CreateNewFolder as CreateNewFolderIcon,
 } from '@mui/icons-material';
 import SettingsDialogModal from './components/settings/SettingsDialog.jsx';
 import ThemeProvider, {useTheme} from './theme/ThemeProvider.jsx';
@@ -153,7 +153,7 @@ function useDragAndDrop(rootRef, onFileDrop) {
 
 // Modern Settings Dialog (Material Design You)
 // Header Component
-// Upload Area Component (MUI)
+// Upload Area Component (MUI) - Modern Flat Material You Design
 const UploadArea = ({ isDragActive, onFileChange, onFolderChange, isProcessing }) => {
   const muiTheme = useMuiTheme();
   const folderInputRef = useRef(null);
@@ -164,80 +164,158 @@ const UploadArea = ({ isDragActive, onFileChange, onFolderChange, isProcessing }
   }, []);
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        position: 'relative',
-        p: { xs: 4, sm: 6 },
-        mb: 3,
-        borderStyle: 'dashed',
-        borderRadius: 3,
-        textAlign: 'center',
-        cursor: 'pointer',
-        transition: 'all .2s',
-        bgcolor: isDragActive ? (muiTheme.palette.mode === 'dark' ? 'action.hover' : 'primary.50') : 'background.paper',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.default',
       }}
     >
-      <input
-        type="file"
-        accept=".zip"
-        onChange={onFileChange}
-        disabled={isProcessing}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
-      />
-      {/* Hidden folder input for directory uploads */}
-      <input
-        type="file"
-        webkitdirectory="true"
-        directory="true"
-        multiple
-        onChange={onFolderChange}
-        disabled={isProcessing}
-        style={{ display: 'none' }}
-        ref={folderInputRef}
-      />
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      {/* Header */}
+      <Box sx={{
+        bgcolor: 'background.paper',
+        borderBottom: (theme) => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        px: { xs: 3, md: 6 },
+        py: { xs: 2.5, md: 3 },
+      }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <CloudUploadIcon sx={{ color: 'primary.main', fontSize: 40 }} />
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
+              {isProcessing ? 'Processing...' : 'Upload Dataset'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5 }}>
+              Import your Instagram data to get started
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+
+      {/* Main Content */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: { xs: 3, md: 6 },
+        py: 4,
+      }}>
         <Box sx={{
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText'
+          width: '100%',
+          maxWidth: 600,
+          textAlign: 'center',
         }}>
-          {isProcessing ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              style={{ width: 32, height: 32, border: '3px solid white', borderTopColor: 'transparent', borderRadius: '50%' }}
+          {/* Drop Zone */}
+          <Box
+            sx={{
+              position: 'relative',
+              py: 8,
+              px: 4,
+              borderRadius: 3,
+              bgcolor: isDragActive
+                ? (theme) => alpha(theme.palette.primary.main, 0.08)
+                : (theme) => alpha(theme.palette.action.hover, 0.3),
+              border: (theme) => `2px dashed ${alpha(theme.palette.divider, 0.2)}`,
+              transition: 'all 0.2s',
+              cursor: 'pointer',
+              '&:hover': {
+                bgcolor: (theme) => alpha(theme.palette.action.hover, 0.5),
+                borderColor: (theme) => alpha(theme.palette.primary.main, 0.3),
+              }
+            }}
+          >
+            <input
+              type="file"
+              accept=".zip"
+              onChange={onFileChange}
+              disabled={isProcessing}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
             />
-          ) : (
-            <CloudUploadIcon fontSize="large" />
+            <input
+              type="file"
+              webkitdirectory="true"
+              directory="true"
+              multiple
+              onChange={onFolderChange}
+              disabled={isProcessing}
+              style={{ display: 'none' }}
+              ref={folderInputRef}
+            />
+
+            {isProcessing ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    border: '4px solid',
+                    borderColor: muiTheme.palette.primary.main,
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%'
+                  }}
+                />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Processing your data...
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  This may take a moment
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <CloudUploadIcon sx={{ fontSize: 80, color: 'primary.main', opacity: 0.6 }} />
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                  {isDragActive ? 'Drop your file here' : 'Drag & drop your ZIP file'}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  or click to browse files
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Alternative Options */}
+          {!isProcessing && (
+            <Box sx={{ mt: 4 }}>
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+                <Box sx={{ flex: 1, height: 1, bgcolor: (theme) => alpha(theme.palette.divider, 0.1) }} />
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  OR
+                </Typography>
+                <Box sx={{ flex: 1, height: 1, bgcolor: (theme) => alpha(theme.palette.divider, 0.1) }} />
+              </Stack>
+
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<CreateNewFolderIcon />}
+                onClick={triggerFolderPicker}
+                fullWidth
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.5,
+                  boxShadow: 'none',
+                  '&:hover': {
+                    boxShadow: 'none',
+                  }
+                }}
+              >
+                Load Folder
+              </Button>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3, lineHeight: 1.6 }}>
+                Export your Instagram data from: Settings → Accounts center → Your information → Download information
+              </Typography>
+            </Box>
           )}
         </Box>
-        <Typography variant="h6">
-          {isProcessing ? 'Processing your data...' : 'Upload your Instagram export'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {isDragActive ? 'Drop your ZIP here' : 'Drag & drop ZIP here, or click to browse (ZIP)'}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Or load a folder export (Settings &gt; Accounts center &gt; Your information &gt; Download information)
-        </Typography>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<CloudUploadIcon />}
-          onClick={triggerFolderPicker}
-          sx={{ mt: 1 }}
-          disabled={isProcessing}
-        >
-          Load Folder
-        </Button>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
@@ -466,6 +544,7 @@ function App() {
       return 'overview';
     }
   });
+  const [connectionSection, setConnectionSection] = useState(null);
   const [datasets, setDatasets] = useState([]);
   const [datasetsLoading, setDatasetsLoading] = useState(false);
   const restoreOnceRef = useRef(false);
@@ -724,6 +803,12 @@ function App() {
     try { localStorage.setItem('peeksta_active_section', activeSection); } catch (_) {}
   }, [activeSection]);
 
+  // Handle navigation from Overview to Connections with specific section
+  const handleNavigateToConnections = useCallback((section) => {
+    setConnectionSection(section);
+    setActiveSection('connections');
+  }, []);
+
   return (
     <ThemeProvider>
       <AppContent
@@ -741,6 +826,8 @@ function App() {
         progressText={progressText}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
+        connectionSection={connectionSection}
+        onNavigateToConnections={handleNavigateToConnections}
         datasets={datasets}
         datasetsLoading={datasetsLoading}
         refreshDatasets={refreshDatasets}
@@ -769,6 +856,8 @@ const AppContent = ({
   progressText,
   activeSection,
   setActiveSection,
+  connectionSection,
+  onNavigateToConnections,
   datasets,
   datasetsLoading,
   refreshDatasets,
@@ -786,14 +875,41 @@ const AppContent = ({
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Toaster
-        position="top-right"
+        position="top-center"
         toastOptions={{
-          duration: 4000,
+          duration: 3500,
           style: {
-            background: isDark ? '#101528' : '#ffffff',
-            color: isDark ? '#E6EAF2' : '#101528',
-            border: `1px solid ${isDark ? '#24304A' : '#e2e8f0'}`,
-            borderRadius: '16px',
+            background: isDark ? '#1e1e1e' : '#ffffff',
+            color: isDark ? '#e0e0e0' : '#1a1a1a',
+            border: 'none',
+            borderRadius: '12px',
+            boxShadow: isDark
+              ? '0 4px 12px rgba(0, 0, 0, 0.5)'
+              : '0 4px 12px rgba(0, 0, 0, 0.15)',
+            padding: '16px 20px',
+            fontSize: '0.95rem',
+            fontWeight: 500,
+            maxWidth: '500px',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#4caf50',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#f44336',
+              secondary: '#ffffff',
+            },
+          },
+          loading: {
+            iconTheme: {
+              primary: '#2196f3',
+              secondary: '#ffffff',
+            },
           },
         }}
       />
@@ -817,117 +933,92 @@ const AppContent = ({
         isItemDisabled={(key) => isNavDisabled && !['overview', 'datasets'].includes(key)}
       >
 
-      <Container
-        maxWidth="lg"
+      <Box
         sx={{
-          py: { xs: 3, md: 6 },
-          '& .MuiPaper-root:empty': { display: 'none' },
+          height: '100vh',
+          overflow: 'hidden',
         }}
         ref={rootRef}
       >
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
-            {!isUploaded && (
-                <UploadArea isDragActive={isDragActive} onFileChange={handleFileChange} onFolderChange={handleFolderChange} isProcessing={isProcessing} />
-              )}
-            {!!progressText && !isUploaded && (
-              <Typography variant="caption" color="text.secondary">{progressText}</Typography>
+        {activeSection === 'datasets' ? (
+          <DatasetsManager
+            datasets={datasets}
+            loading={datasetsLoading}
+            onRefresh={refreshDatasets}
+            onLoad={onLoadDataset}
+            onDelete={onDeleteDataset}
+            onRename={onRenameDataset}
+            currentId={currentDatasetId}
+            onFileChange={handleFileChange}
+            onFolderChange={handleFolderChange}
+            isProcessing={isProcessing}
+          />
+        ) : !isUploaded ? (
+          <UploadArea
+            isDragActive={isDragActive}
+            onFileChange={handleFileChange}
+            onFolderChange={handleFolderChange}
+            isProcessing={isProcessing}
+          />
+        ) : (
+          <>
+            {isUploaded && advanced && activeSection === 'overview' && (
+              <OverviewPage
+                advanced={advanced}
+                mode={isDark ? 'dark' : 'light'}
+                onNavigateToConnections={onNavigateToConnections}
+              />
             )}
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={5}>
-            <Stack spacing={3}>
-              {activeSection === 'datasets' && (
-                <DatasetsManager
-                  datasets={datasets}
-                  loading={datasetsLoading}
-                  onRefresh={refreshDatasets}
-                  onLoad={onLoadDataset}
-                  onDelete={onDeleteDataset}
-                  onRename={onRenameDataset}
-                  currentId={currentDatasetId}
-                />
-              )}
-              {(!isUploaded) && (
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>How it works</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Export your Instagram data (ZIP or folder) then drop the ZIP here. We process it locally in your browser; no data leaves your device.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              )}
-              {(!isUploaded) && (
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                      <ColorLensIcon color="primary" />
-                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Material You</Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Dynamic color system with accessible contrast and soft shapes.
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Chip label="Responsive" size="small" color="primary" variant="outlined" />
-                      <Chip label="Modern" size="small" color="primary" variant="outlined" />
-                      <Chip label="Accessible" size="small" color="primary" variant="outlined" />
-                    </Stack>
-                  </CardContent>
-                </Card>
-              )}
-              {isUploaded && advanced && activeSection === 'overview' && (
-                <OverviewPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
 
-              {isUploaded && advanced && activeSection === 'connections' && (
-                <ConnectionsPage advanced={advanced} />
-              )}
+            {isUploaded && advanced && activeSection === 'connections' && (
+              <ConnectionsPage
+                advanced={advanced}
+                initialSection={connectionSection}
+              />
+            )}
 
-              {isUploaded && advanced && activeSection === 'messages' && (
-                <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'messages' && (
+              <MessagesPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'link-history' && (
-                <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'link-history' && (
+              <LinkHistoryPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'logged-information' && (
-                <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'logged-information' && (
+              <LoggedInformationPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'ads' && (
-                <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'ads' && (
+              <AdsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'apps' && (
-                <AppsPage advanced={advanced} />
-              )}
+            {isUploaded && advanced && activeSection === 'apps' && (
+              <AppsPage advanced={advanced} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'insights' && (
-                <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'insights' && (
+              <InsightsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'threads' && (
-                <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
-              )}
+            {isUploaded && advanced && activeSection === 'threads' && (
+              <ThreadsPage advanced={advanced} mode={isDark ? 'dark' : 'light'} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'preferences' && (
-                <PreferencesPage advanced={advanced} />
-              )}
+            {isUploaded && advanced && activeSection === 'preferences' && (
+              <PreferencesPage advanced={advanced} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'security' && (
-                <SecurityPage advanced={advanced} />
-              )}
+            {isUploaded && advanced && activeSection === 'security' && (
+              <SecurityPage advanced={advanced} />
+            )}
 
-              {isUploaded && advanced && activeSection === 'personal' && (
-                <PersonalPage advanced={advanced} />
-              )}
-            </Stack>
-          </Grid>
-        </Grid>
-      </Container>
+            {isUploaded && advanced && activeSection === 'personal' && (
+              <PersonalPage advanced={advanced} />
+            )}
+          </>
+        )}
+      </Box>
 
       <AnimatePresence>{isDragActive && <DragOverlay />}</AnimatePresence>
       </MiniDrawer>
@@ -957,6 +1048,8 @@ AppContent.propTypes = {
   progressText: PropTypes.string,
   activeSection: PropTypes.string,
   setActiveSection: PropTypes.func,
+  connectionSection: PropTypes.string,
+  onNavigateToConnections: PropTypes.func,
   datasets: PropTypes.array,
   datasetsLoading: PropTypes.bool,
   refreshDatasets: PropTypes.func,
